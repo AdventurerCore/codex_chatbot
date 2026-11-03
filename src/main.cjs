@@ -1,5 +1,6 @@
 const fs=require('node:fs');
 const path=require('node:path');
+const {version}=require('../package.json');
 const {serve,ensureDaemon,apiCall,openBrowser,root,runtime}=require('./service.cjs');
 const {Server}=require('@modelcontextprotocol/sdk/server/index.js');
 const {StdioServerTransport}=require('@modelcontextprotocol/sdk/server/stdio.js');
@@ -13,7 +14,7 @@ const tools=[
   {name:'feishu_ui',title:'机器人界面操作',description:'管理界面专用操作。',inputSchema:{type:'object',properties:{action:{type:'string',enum:actions},args:{type:'object'}},required:['action','args'],additionalProperties:false},annotations:{readOnlyHint:false,destructiveHint:true,openWorldHint:true},_meta:{ui:{visibility:['app']}}}
 ];
 async function mcp(){
-  const server=new Server({name:'codex-feishu-bot',version:'0.1.1'},{capabilities:{tools:{},resources:{},extensions:{'io.modelcontextprotocol/ui':{}}}});
+  const server=new Server({name:'codex-feishu-bot',version},{capabilities:{tools:{},resources:{},extensions:{'io.modelcontextprotocol/ui':{}}}});
   server.setRequestHandler(ListToolsRequestSchema,async()=>({tools}));
   server.setRequestHandler(ListResourcesRequestSchema,async()=>({resources:[{uri:UI,name:'飞书机器人管理',mimeType:'text/html;profile=mcp-app'}]}));
   server.setRequestHandler(ReadResourceRequestSchema,async req=>{if(req.params.uri!==UI)throw Error('Unknown resource');return {contents:[{uri:UI,mimeType:'text/html;profile=mcp-app',text:fs.readFileSync(path.join(root,'dist/dashboard.html'),'utf8'),_meta:{ui:{prefersBorder:false,csp:{connectDomains:[],resourceDomains:[]}},'openai/ui':{preferredDisplayMode:'fullscreen',availableDisplayModes:['fullscreen','inline']}}}]};});

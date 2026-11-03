@@ -2058,10 +2058,10 @@
   var duration = /^P(?:(\d+W)|(?!.*W)(?=\d|T\d)(\d+Y)?(\d+M)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+([.,]\d+)?S)?)?)$/;
   var extendedDuration = /^[-+]?P(?!$)(?:(?:[-+]?\d+Y)|(?:[-+]?\d+[.,]\d+Y$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:(?:[-+]?\d+W)|(?:[-+]?\d+[.,]\d+W$))?(?:(?:[-+]?\d+D)|(?:[-+]?\d+[.,]\d+D$))?(?:T(?=[\d+-])(?:(?:[-+]?\d+H)|(?:[-+]?\d+[.,]\d+H$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:[-+]?\d+(?:[.,]\d+)?S)?)??$/;
   var guid = /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/;
-  var uuid = (version2) => {
-    if (!version2)
+  var uuid = (version3) => {
+    if (!version3)
       return /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/;
-    return new RegExp(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-${version2}[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$`);
+    return new RegExp(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-${version3}[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$`);
   };
   var uuid4 = /* @__PURE__ */ uuid(4);
   var uuid6 = /* @__PURE__ */ uuid(6);
@@ -19550,10 +19550,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     } catch {
       throw new Error("fromJSONSchema input is not valid JSON (possibly cyclic); use $defs/$ref for recursive schemas");
     }
-    const version2 = detectVersion(normalized, params?.defaultTarget);
+    const version3 = detectVersion(normalized, params?.defaultTarget);
     const defs = normalized.$defs || normalized.definitions || {};
     const ctx = {
-      version: version2,
+      version: version3,
       defs,
       refs: /* @__PURE__ */ new Map(),
       processing: /* @__PURE__ */ new Set(),
@@ -20880,14 +20880,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   };
   var FIRST_MODERN_PROTOCOL_VERSION = "2026-07-28";
   var SUPPORTED_MODERN_PROTOCOL_VERSIONS = [FIRST_MODERN_PROTOCOL_VERSION];
-  function isModernProtocolVersion(version2) {
-    return version2 >= FIRST_MODERN_PROTOCOL_VERSION;
+  function isModernProtocolVersion(version3) {
+    return version3 >= FIRST_MODERN_PROTOCOL_VERSION;
   }
   function legacyProtocolVersions(versions) {
-    return versions.filter((version2) => !isModernProtocolVersion(version2));
+    return versions.filter((version3) => !isModernProtocolVersion(version3));
   }
   function modernProtocolVersions(versions) {
-    return versions.filter((version2) => isModernProtocolVersion(version2));
+    return versions.filter((version3) => isModernProtocolVersion(version3));
   }
   function appendTextFallbackForNonObject(result) {
     const sc = result.structuredContent;
@@ -23407,8 +23407,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return wireResultSchemasMemo;
   }
   var MODERN_WIRE_REVISION = "2026-07-28";
-  function codecForVersion(version2) {
-    return version2 !== void 0 && isModernProtocolVersion(version2) ? rev2026Codec : rev2025Codec;
+  function codecForVersion(version3) {
+    return version3 !== void 0 && isModernProtocolVersion(version3) ? rev2026Codec : rev2025Codec;
   }
   function classifiedWireEra(classification) {
     if (classification.revision !== void 0) return codecForVersion(classification.revision).era;
@@ -24467,8 +24467,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     */
     _negotiatedProtocolVersion;
     static {
-      writeNegotiatedProtocolVersion = (instance, version2) => {
-        instance._negotiatedProtocolVersion = version2;
+      writeNegotiatedProtocolVersion = (instance, version3) => {
+        instance._negotiatedProtocolVersion = version3;
       };
     }
     _supportedProtocolVersions;
@@ -26907,7 +26907,7 @@ Known schemas:
     const parsed = codecForVersion(MODERN_WIRE_REVISION).validateResult("server/discover", result);
     if (!parsed.ok) return { kind: "legacy" };
     const supportedVersions = parsed.value.supportedVersions;
-    const overlap = context.clientModernVersions.find((version2) => supportedVersions.includes(version2));
+    const overlap = context.clientModernVersions.find((version3) => supportedVersions.includes(version3));
     if (overlap !== void 0) return {
       kind: "modern",
       version: overlap,
@@ -26932,7 +26932,7 @@ Known schemas:
         requested: parseRequested(data) ?? context.requestedVersion
       }, message);
       const supportedModern = modernProtocolVersions(supported);
-      const mutual = context.clientModernVersions.find((version2) => supportedModern.includes(version2));
+      const mutual = context.clientModernVersions.find((version3) => supportedModern.includes(version3));
       if (mutual !== void 0) return {
         kind: "corrective",
         version: mutual,
@@ -27508,10 +27508,10 @@ Known schemas:
     * `'auto'` fallback included).
     */
     _outboundMetaEnvelope() {
-      const version2 = this._negotiatedProtocolVersion;
-      if (version2 === void 0) return void 0;
+      const version3 = this._negotiatedProtocolVersion;
+      if (version3 === void 0) return void 0;
       return this._wireCodec().outboundEnvelope({
-        protocolVersion: version2,
+        protocolVersion: version3,
         clientInfo: this._clientInfo,
         clientCapabilities: this._capabilities
       });
@@ -27803,16 +27803,16 @@ Known schemas:
       const discover = prior.discover;
       this._resetConnectionState();
       const explicit = this._supportedProtocolVersionsOption;
-      const version2 = (explicit && modernProtocolVersions(explicit).length > 0 ? modernProtocolVersions(explicit) : SUPPORTED_MODERN_PROTOCOL_VERSIONS).find((v) => discover.supportedVersions.includes(v));
-      if (version2 === void 0) throw new SdkError(SdkErrorCode.EraNegotiationFailed, "connect({ prior }) with a modern verdict requires a 2026-07-28+ mutual protocol version; the supplied DiscoverResult and this client's supportedProtocolVersions have no modern overlap. For a server known to be legacy, pass prior: { kind: 'legacy' } to skip the probe and initialize directly, or use versionNegotiation: { mode: 'auto' } to re-probe with legacy fallback.");
+      const version3 = (explicit && modernProtocolVersions(explicit).length > 0 ? modernProtocolVersions(explicit) : SUPPORTED_MODERN_PROTOCOL_VERSIONS).find((v) => discover.supportedVersions.includes(v));
+      if (version3 === void 0) throw new SdkError(SdkErrorCode.EraNegotiationFailed, "connect({ prior }) with a modern verdict requires a 2026-07-28+ mutual protocol version; the supplied DiscoverResult and this client's supportedProtocolVersions have no modern overlap. For a server known to be legacy, pass prior: { kind: 'legacy' } to skip the probe and initialize directly, or use versionNegotiation: { mode: 'auto' } to re-probe with legacy fallback.");
       await super.connect(transport);
       this._discoverResult = discover;
       this._serverCapabilities = discover.capabilities;
       this._serverVersion = serverInfoFromDiscover(discover);
       this._cache.setServerIdentity(this._deriveServerIdentity(transport));
       this._instructions = discover.instructions;
-      this._negotiatedProtocolVersion = version2;
-      transport.setProtocolVersion?.(version2);
+      this._negotiatedProtocolVersion = version3;
+      transport.setProtocolVersion?.(version3);
       if (this._listChangedConfig) try {
         this._setupListChangedHandlers(this._listChangedConfig);
       } catch (error62) {
@@ -27869,9 +27869,9 @@ Known schemas:
     * established.
     */
     getProtocolEra() {
-      const version2 = this._negotiatedProtocolVersion;
-      if (version2 === void 0) return void 0;
-      return isModernProtocolVersion(version2) ? "modern" : "legacy";
+      const version3 = this._negotiatedProtocolVersion;
+      if (version3 === void 0) return void 0;
+      return isModernProtocolVersion(version3) ? "modern" : "legacy";
     }
     /**
     * After initialization has completed, this may be populated with information about the server's instructions.
@@ -29272,6 +29272,9 @@ container holding the app. Specify either width or maxWidth, and either height o
     }
   };
 
+  // package.json
+  var version2 = "0.1.2";
+
   // src/ui/app.js
   var appRoot = document.querySelector("#app");
   var dialogs = document.querySelector("#dialogs");
@@ -29343,7 +29346,7 @@ container holding the app. Specify either width or maxWidth, and either height o
   }
   function showProjects() {
     modalType = "projects";
-    modal("\u9879\u76EE\u914D\u7F6E", `<div class="help">\u673A\u5668\u4EBA\u53EA\u80FD\u8BBF\u95EE\u8FD9\u91CC\u914D\u7F6E\u7684\u672C\u5730\u6587\u4EF6\u5939\u3002</div><div style="max-height:230px;overflow:auto;margin:10px 0 20px">${state.projects.map((p2) => `<div class="projectrow">${esc2(p2.name)}<small>${esc2(p2.path)}</small></div>`).join("") || '<p class="muted">\u5C1A\u672A\u6DFB\u52A0\u9879\u76EE\u3002</p>'}</div><form id="project-form"><label class="field">\u9879\u76EE\u540D\u79F0<input name="name" placeholder="\u6211\u7684\u9879\u76EE"></label><label class="field">\u672C\u5730\u6587\u4EF6\u5939<input name="path" required placeholder="D:\\code\\my-project"></label><button class="primary">\u6DFB\u52A0\u9879\u76EE</button></form>`, "", true);
+    modal("\u9879\u76EE\u914D\u7F6E", `<div class="help">\u673A\u5668\u4EBA\u53EA\u80FD\u8BBF\u95EE\u8FD9\u91CC\u914D\u7F6E\u7684\u672C\u5730\u6587\u4EF6\u5939\u3002</div><div style="max-height:230px;overflow:auto;margin:10px 0 20px">${state.projects.map((p2) => `<div class="projectrow">${esc2(p2.name)}<small>${esc2(p2.path)}</small></div>`).join("") || '<p class="muted">\u5C1A\u672A\u6DFB\u52A0\u9879\u76EE\u3002</p>'}</div><form id="project-form"><label class="field">\u9879\u76EE\u540D\u79F0<input name="name" placeholder="\u6211\u7684\u9879\u76EE"></label><label class="field">\u672C\u5730\u6587\u4EF6\u5939<input name="path" required placeholder="\u672C\u673A\u9879\u76EE\u6587\u4EF6\u5939\u7684\u5B8C\u6574\u8DEF\u5F84"></label><button class="primary">\u6DFB\u52A0\u9879\u76EE</button></form>`, "", true);
   }
   function showScope() {
     modalType = "scope";
@@ -29357,7 +29360,7 @@ container holding the app. Specify either width or maxWidth, and either height o
     try {
       const r = await call("begin_registration", { id });
       if (modalType !== "qr" || id !== selected) return;
-      modal("\u5173\u8054\u98DE\u4E66\u673A\u5668\u4EBA", `<p class="muted">\u7528\u98DE\u4E66\u626B\u63CF\u4E8C\u7EF4\u7801\uFF0C\u5728\u624B\u673A\u4E0A\u786E\u8BA4\u521B\u5EFA\u5E76\u5173\u8054\u673A\u5668\u4EBA\u3002</p><div class="qr"><img src="${esc2(r.qrDataUrl)}" alt="\u98DE\u4E66\u5173\u8054\u4E8C\u7EF4\u7801"><p id="qr-state">\u7B49\u5F85\u626B\u7801 \xB7 \u6709\u6548\u671F 10 \u5206\u949F</p></div><div class="help">\u51ED\u636E\u4F7F\u7528 Windows \u52A0\u5BC6\u4FDD\u5B58\u5728\u672C\u673A\u3002\u626B\u7801\u540E\u81EA\u52A8\u5173\u8054\u5F53\u524D\u98DE\u4E66\u7528\u6237\u3002</div>`, `<button data-action="open-qr" data-url="${esc2(r.qrUrl)}">\u5728\u6D4F\u89C8\u5668\u6253\u5F00</button><button data-action="manual">\u624B\u52A8\u914D\u7F6E</button>`);
+      modal("\u5173\u8054\u98DE\u4E66\u673A\u5668\u4EBA", `<p class="muted">\u7528\u98DE\u4E66\u626B\u63CF\u4E8C\u7EF4\u7801\uFF0C\u5728\u624B\u673A\u4E0A\u786E\u8BA4\u521B\u5EFA\u5E76\u5173\u8054\u673A\u5668\u4EBA\u3002</p><div class="qr"><img src="${esc2(r.qrDataUrl)}" alt="\u98DE\u4E66\u5173\u8054\u4E8C\u7EF4\u7801"><p id="qr-state">\u7B49\u5F85\u626B\u7801 \xB7 \u6709\u6548\u671F 10 \u5206\u949F</p></div><div class="help">\u51ED\u636E\u52A0\u5BC6\u4FDD\u5B58\u5728\u672C\u673A\u3002\u626B\u7801\u540E\u81EA\u52A8\u5173\u8054\u5F53\u524D\u98DE\u4E66\u7528\u6237\u3002</div>`, `<button data-action="open-qr" data-url="${esc2(r.qrUrl)}">\u5728\u6D4F\u89C8\u5668\u6253\u5F00</button><button data-action="manual">\u624B\u52A8\u914D\u7F6E</button>`);
       async function poll() {
         if (modalType !== "qr") return;
         try {
@@ -29534,7 +29537,7 @@ container holding the app. Specify either width or maxWidth, and either height o
   });
   async function start() {
     if (window.parent !== window) {
-      hostApp = new l({ name: "Codex \u98DE\u4E66\u673A\u5668\u4EBA", version: "0.1.1" }, {});
+      hostApp = new l({ name: "Codex \u98DE\u4E66\u673A\u5668\u4EBA", version: version2 }, {});
       hostApp.ontoolresult = (r) => {
         if (r.structuredContent?.bots) {
           state = r.structuredContent;
@@ -29550,6 +29553,6 @@ container holding the app. Specify either width or maxWidth, and either height o
       });
     }, 5e3);
   }
-  start().catch((e) => appRoot.innerHTML = `<div class="empty"><p>${esc2(e.message)}</p><p class="help">\u901A\u8FC7\u300C\u542F\u52A8\u673A\u5668\u4EBA\u7BA1\u7406.cmd\u300D\u6216 Codex \u4E2D\u7684\u98DE\u4E66\u673A\u5668\u4EBA\u63D2\u4EF6\u91CD\u65B0\u6253\u5F00\u3002</p></div>`);
+  start().catch((e) => appRoot.innerHTML = `<div class="empty"><p>${esc2(e.message)}</p><p class="help">\u901A\u8FC7\u672C\u673A\u7684\u300C\u542F\u52A8\u673A\u5668\u4EBA\u7BA1\u7406\u300D\u811A\u672C\u6216 Codex \u4E2D\u7684\u98DE\u4E66\u673A\u5668\u4EBA\u63D2\u4EF6\u91CD\u65B0\u6253\u5F00\u3002</p></div>`);
 })();
 </script></body></html>

@@ -6,6 +6,8 @@ const {spawn}=require('node:child_process');
 const {Store,dataDir,atomic}=require('./store.cjs');
 const {CodexClient}=require('./codex.cjs');
 const {Bridge}=require('./bridge.cjs');
+const {browserCommand}=require('./platform.cjs');
+const {version}=require('../package.json');
 const PORT=Number(process.env.CODEX_FEISHU_PORT||23947);
 const runtimePath=path.join(dataDir,'runtime.json');
 const root=path.resolve(__dirname,'..');
@@ -17,7 +19,7 @@ async function apiCall(info,action,args={}){
 }
 async function ensureDaemon(){
   let info=runtime();if(info)try{await apiCall(info,'status');return info;}catch{}
-  fs.mkdirSync(dataDir,{recursive:true});const fd=fs.openSync(path.join(dataDir,'service.log'),'a');
+  fs.mkdirSync(dataDir,{recursive:true,mode:0o700});const fd=fs.openSync(path.join(dataDir,'service.log'),'a',0o600);
   const child=spawn(process.execPath,[path.join(root,'dist/main.cjs'),'serve'],{detached:true,windowsHide:true,stdio:['ignore',fd,fd],env:process.env});child.unref();fs.closeSync(fd);
   for(let i=0;i<50;i++){await delay(200);info=runtime();if(info)try{await apiCall(info,'status');return info;}catch{}}
   throw Error('本地飞书服务未能启动。请查看 '+path.join(dataDir,'service.log'));
@@ -63,9 +65,9 @@ async function serve(){
     req.on('end',async()=>{try{const parsed=JSON.parse(body);if(typeof parsed.action!=='string'||!parsed.args||typeof parsed.args!=='object'||Array.isArray(parsed.args))throw Error('无效请求');const result=await dispatch(parsed.action,parsed.args);res.end(JSON.stringify(result));}catch(e){res.writeHead(400);res.end(JSON.stringify({error:e.message}));}});
   });
   server.on('error',e=>{if(e.code==='EADDRINUSE')process.exit(0);console.error('Service:',e.message);process.exit(1);});
-  server.listen(PORT,'127.0.0.1',()=>{atomic(runtimePath,{port:PORT,token,pid:process.pid,version:'0.1.1'});bridge.start();console.log('Codex Feishu service listening on 127.0.0.1:'+PORT);});
+  server.listen(PORT,'127.0.0.1',()=>{atomic(runtimePath,{port:PORT,token,pid:process.pid,version});bridge.start();console.log('Codex Feishu service listening on 127.0.0.1:'+PORT);});
   async function shutdown(){await bridge.stop();server.close();const r=runtime();if(r?.pid===process.pid)fs.rmSync(runtimePath,{force:true});process.exit(0);}
   process.on('SIGTERM',shutdown);process.on('SIGINT',shutdown);
 }
-function openBrowser(url){const script='Start-Process -FilePath $env:CODEX_FEISHU_OPEN_URL';return new Promise((resolve,reject)=>{const p=spawn('powershell.exe',['-NoProfile','-NonInteractive','-Command',script],{windowsHide:true,stdio:'ignore',env:{...process.env,CODEX_FEISHU_OPEN_URL:url}});p.on('error',reject);p.on('exit',code=>code?reject(Error('无法打开默认浏览器')):resolve());});}
+function openBrowser(url){const {command,args,env}=browserCommand(url);return new Promise((resolve,reject)=>{const p=spawn(command,args,{windowsHide:true,stdio:'ignore',env});p.on('error',reject);p.on('exit',code=>code?reject(Error('无法打开默认浏览器')):resolve());});}
 module.exports={serve,ensureDaemon,apiCall,runtime,openBrowser,root};

@@ -7,17 +7,168 @@ var __commonJS = (cb, mod) => function __require() {
   }
 };
 
+// package.json
+var require_package = __commonJS({
+  "package.json"(exports2, module2) {
+    module2.exports = {
+      name: "codex-feishu-bot",
+      version: "0.1.2",
+      private: true,
+      license: "Apache-2.0",
+      description: "Local Feishu/Lark bot channel for Codex",
+      scripts: { build: "node scripts/build.cjs", start: "node dist/main.cjs dashboard", test: "node --test test/*.test.cjs" },
+      dependencies: { "@larksuiteoapi/node-sdk": "1.76.0", "@modelcontextprotocol/ext-apps": "2.0.4", "@modelcontextprotocol/sdk": "1.32.2", qrcode: "1.5.4" },
+      devDependencies: { esbuild: "0.28.2" },
+      engines: { node: ">=22" }
+    };
+  }
+});
+
+// src/platform.cjs
+var require_platform = __commonJS({
+  "src/platform.cjs"(exports2, module2) {
+    var fs2 = require("node:fs");
+    var os = require("node:os");
+    var path2 = require("node:path");
+    function getDataDir(env = process.env, platform = process.platform, home = os.homedir()) {
+      if (env.CODEX_FEISHU_DATA_DIR) return env.CODEX_FEISHU_DATA_DIR;
+      const legacy = path2.join(env.LOCALAPPDATA || path2.join(home, ".local/share"), "CodexFeishuBridge");
+      if (platform !== "darwin") return legacy;
+      const current = path2.join(home, "Library", "Application Support", "CodexFeishuBridge");
+      return !fs2.existsSync(path2.join(current, "state.json")) && fs2.existsSync(path2.join(legacy, "state.json")) ? legacy : current;
+    }
+    function childEnvironment(env = process.env, platform = process.platform) {
+      if (platform !== "darwin") return env;
+      const dirs = [...(env.PATH || "/usr/bin:/bin").split(path2.delimiter), path2.dirname(process.execPath), "/opt/homebrew/bin", "/usr/local/bin", path2.join(os.homedir(), ".local/bin")];
+      return { ...env, PATH: [...new Set(dirs)].join(path2.delimiter) };
+    }
+    function codexExecutable(env = process.env, platform = process.platform) {
+      if (env.CODEX_FEISHU_CODEX_PATH) return env.CODEX_FEISHU_CODEX_PATH;
+      if (platform === "darwin") {
+        for (const dir of childEnvironment(env, platform).PATH.split(path2.delimiter)) {
+          const candidate = path2.resolve(dir, "codex");
+          try {
+            fs2.accessSync(candidate, fs2.constants.X_OK);
+            if (fs2.statSync(candidate).isFile()) return candidate;
+          } catch {
+          }
+        }
+      }
+      return "codex";
+    }
+    function browserCommand(url, platform = process.platform, env = process.env) {
+      if (!["http:", "https:"].includes(new URL(url).protocol)) throw Error("\u7BA1\u7406\u9875\u5730\u5740\u65E0\u6548");
+      if (platform === "darwin") return { command: "/usr/bin/open", args: [url], env };
+      if (platform === "win32") return { command: "powershell.exe", args: ["-NoProfile", "-NonInteractive", "-Command", "Start-Process -FilePath $env:CODEX_FEISHU_OPEN_URL"], env: { ...env, CODEX_FEISHU_OPEN_URL: url } };
+      throw Error("\u81EA\u52A8\u6253\u5F00\u7BA1\u7406\u9875\u76EE\u524D\u652F\u6301 Windows \u548C macOS\u3002");
+    }
+    module2.exports = { getDataDir, childEnvironment, codexExecutable, browserCommand };
+  }
+});
+
+// src/credentials.cjs
+var require_credentials = __commonJS({
+  "src/credentials.cjs"(exports2, module2) {
+    var crypto = require("node:crypto");
+    var { execFile } = require("node:child_process");
+    var KEYCHAIN_SERVICE = "com.adventurercore.codex-feishu-bot";
+    var KEYCHAIN_ACCOUNT = "credential-key-v1";
+    var MAC_PREFIX = "macos-keychain-v1:";
+    function runProcess(command, args, input = "") {
+      return new Promise((resolve, reject) => {
+        const child = execFile(command, args, { encoding: "utf8", timeout: 3e4, maxBuffer: 65536, windowsHide: true }, (error, stdout, stderr) => {
+          if (error && typeof error.code !== "number") reject(error);
+          else resolve({ code: error?.code || 0, stdout, stderr });
+        });
+        child.stdin.on("error", () => {
+        });
+        child.stdin.end(input);
+      });
+    }
+    function createSecretTransform({ platform = process.platform, run = runProcess, keychainAccount = KEYCHAIN_ACCOUNT } = {}) {
+      if (!/^[a-zA-Z0-9-]+$/.test(keychainAccount)) throw Error("Invalid Keychain account");
+      let keyPromise;
+      async function readKey() {
+        let result;
+        try {
+          result = await run("/usr/bin/security", ["find-generic-password", "-s", KEYCHAIN_SERVICE, "-a", keychainAccount, "-w"]);
+        } catch {
+          throw Error("\u65E0\u6CD5\u8BBF\u95EE macOS \u94A5\u5319\u4E32\uFF0C\u8BF7\u89E3\u9501\u767B\u5F55\u94A5\u5319\u4E32\u5E76\u5141\u8BB8\u8BBF\u95EE\u540E\u91CD\u8BD5\u3002");
+        }
+        if (result.code === 44) return null;
+        if (result.code !== 0) throw Error(`\u65E0\u6CD5\u8BFB\u53D6 macOS \u94A5\u5319\u4E32\uFF08\u9519\u8BEF ${result.code}\uFF09\uFF0C\u8BF7\u89E3\u9501\u767B\u5F55\u94A5\u5319\u4E32\u5E76\u5141\u8BB8\u8BBF\u95EE\u540E\u91CD\u8BD5\u3002`);
+        const hex = result.stdout.trim();
+        if (!/^[a-f0-9]{64}$/.test(hex)) throw Error("macOS \u94A5\u5319\u4E32\u4E2D\u7684\u52A0\u5BC6\u5BC6\u94A5\u65E0\u6548\uFF0C\u8BF7\u6062\u590D\u539F\u5BC6\u94A5\u6216\u91CD\u65B0\u914D\u7F6E\u51ED\u636E\u3002");
+        return Buffer.from(hex, "hex");
+      }
+      async function loadKey(create) {
+        let key = await readKey();
+        if (key) return key;
+        if (!create) throw Error("macOS \u94A5\u5319\u4E32\u4E2D\u7F3A\u5C11\u539F\u52A0\u5BC6\u5BC6\u94A5\uFF0C\u8BF7\u5728\u8FD9\u53F0 Mac \u4E0A\u91CD\u65B0\u5173\u8054\u673A\u5668\u4EBA\u3002");
+        const candidate = crypto.randomBytes(32).toString("hex");
+        try {
+          await run("/usr/bin/security", ["-q", "-i"], `add-generic-password -s ${KEYCHAIN_SERVICE} -a ${keychainAccount} -l "Codex Feishu Bridge" -w ${candidate}
+`);
+        } catch {
+          throw Error("\u65E0\u6CD5\u5C06\u52A0\u5BC6\u5BC6\u94A5\u4FDD\u5B58\u5230 macOS \u94A5\u5319\u4E32\uFF0C\u8BF7\u89E3\u9501\u767B\u5F55\u94A5\u5319\u4E32\u5E76\u5141\u8BB8\u8BBF\u95EE\u540E\u91CD\u8BD5\u3002");
+        }
+        key = await readKey();
+        if (!key) throw Error("\u672A\u80FD\u5C06\u52A0\u5BC6\u5BC6\u94A5\u4FDD\u5B58\u5230 macOS \u94A5\u5319\u4E32\uFF0C\u51ED\u636E\u672A\u4FDD\u5B58\u3002");
+        return key;
+      }
+      function macKey(create) {
+        if (!keyPromise) keyPromise = loadKey(create).catch((error) => {
+          keyPromise = null;
+          throw error;
+        });
+        return keyPromise;
+      }
+      return async function secretTransform2(value, decrypt = false) {
+        if (platform === "win32") {
+          if (decrypt && value.startsWith(MAC_PREFIX)) throw Error("\u8FD9\u4E9B\u51ED\u636E\u6765\u81EA macOS\uFF0C\u8BF7\u5728 Windows \u4E0A\u91CD\u65B0\u5173\u8054\u673A\u5668\u4EBA\u3002");
+          const script = "Add-Type -AssemblyName System.Security; $s=[Console]::In.ReadToEnd(); $b=[Convert]::FromBase64String($s); $r=[Security.Cryptography.ProtectedData]::" + (decrypt ? "Unprotect" : "Protect") + "($b,$null,[Security.Cryptography.DataProtectionScope]::CurrentUser); [Console]::Out.Write([Convert]::ToBase64String($r))";
+          const result = await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], decrypt ? value : Buffer.from(value, "utf8").toString("base64"));
+          if (result.code) throw Error("Windows \u51ED\u636E\u52A0\u5BC6/\u89E3\u5BC6\u5931\u8D25");
+          return decrypt ? Buffer.from(result.stdout.trim(), "base64").toString("utf8") : result.stdout.trim();
+        }
+        if (platform !== "darwin") throw Error("\u6B64\u63D2\u4EF6\u7684\u51ED\u636E\u5B58\u50A8\u76EE\u524D\u652F\u6301 Windows \u548C macOS\u3002");
+        if (decrypt) {
+          if (!value.startsWith(MAC_PREFIX)) throw Error("\u8FD9\u4E9B\u51ED\u636E\u4E0D\u662F macOS \u94A5\u5319\u4E32\u683C\u5F0F\uFF0C\u8BF7\u5728\u8FD9\u53F0 Mac \u4E0A\u91CD\u65B0\u5173\u8054\u673A\u5668\u4EBA\u3002");
+          const encoded = value.slice(MAC_PREFIX.length), payload = Buffer.from(encoded, "base64");
+          if (payload.length < 28 || payload.toString("base64") !== encoded) throw Error("macOS \u51ED\u636E\u683C\u5F0F\u65E0\u6548\uFF0C\u8BF7\u91CD\u65B0\u5173\u8054\u673A\u5668\u4EBA\u3002");
+          const key2 = await macKey(false);
+          try {
+            const decipher = crypto.createDecipheriv("aes-256-gcm", key2, payload.subarray(0, 12));
+            decipher.setAAD(Buffer.from(MAC_PREFIX));
+            decipher.setAuthTag(payload.subarray(12, 28));
+            return Buffer.concat([decipher.update(payload.subarray(28)), decipher.final()]).toString("utf8");
+          } catch {
+            throw Error("macOS \u51ED\u636E\u89E3\u5BC6\u5931\u8D25\uFF0C\u8BF7\u6062\u590D\u539F\u94A5\u5319\u4E32\u6216\u91CD\u65B0\u5173\u8054\u673A\u5668\u4EBA\u3002");
+          }
+        }
+        const key = await macKey(true), nonce = crypto.randomBytes(12);
+        const cipher = crypto.createCipheriv("aes-256-gcm", key, nonce);
+        cipher.setAAD(Buffer.from(MAC_PREFIX));
+        const ciphertext = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
+        return MAC_PREFIX + Buffer.concat([nonce, cipher.getAuthTag(), ciphertext]).toString("base64");
+      };
+    }
+    var secretTransform = createSecretTransform();
+    module2.exports = { secretTransform, createSecretTransform, runProcess, KEYCHAIN_SERVICE, MAC_PREFIX };
+  }
+});
+
 // src/store.cjs
 var require_store = __commonJS({
   "src/store.cjs"(exports2, module2) {
     var fs2 = require("node:fs");
     var path2 = require("node:path");
-    var os = require("node:os");
     var crypto = require("node:crypto");
-    var { spawn } = require("node:child_process");
-    var dataDir = process.env.CODEX_FEISHU_DATA_DIR || path2.join(process.env.LOCALAPPDATA || path2.join(os.homedir(), ".local/share"), "CodexFeishuBridge");
+    var { getDataDir } = require_platform();
+    var { secretTransform } = require_credentials();
+    var dataDir = getDataDir();
     function atomic(file, value) {
-      fs2.mkdirSync(path2.dirname(file), { recursive: true });
+      fs2.mkdirSync(path2.dirname(file), { recursive: true, mode: 448 });
       const temp = file + "." + crypto.randomUUID() + ".tmp";
       fs2.writeFileSync(temp, JSON.stringify(value, null, 2), { mode: 384 });
       fs2.renameSync(temp, file);
@@ -28,19 +179,6 @@ var require_store = __commonJS({
     function samePath(a, b) {
       const normalize = (p) => process.platform === "win32" ? p.toLowerCase() : p;
       return normalize(canonical(a)) === normalize(canonical(b));
-    }
-    function secretTransform(value, decrypt = false) {
-      if (process.platform !== "win32") throw Error("\u6B64\u7248\u672C\u4F7F\u7528 Windows DPAPI \u4FDD\u5B58\u51ED\u636E\uFF0C\u9700\u8981 Windows\u3002");
-      const script = "Add-Type -AssemblyName System.Security; $s=[Console]::In.ReadToEnd(); $b=[Convert]::FromBase64String($s); $r=[Security.Cryptography.ProtectedData]::" + (decrypt ? "Unprotect" : "Protect") + "($b,$null,[Security.Cryptography.DataProtectionScope]::CurrentUser); [Console]::Out.Write([Convert]::ToBase64String($r))";
-      return new Promise((resolve, reject) => {
-        const p = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
-        let out = "";
-        p.stdout.on("data", (b) => out += b);
-        p.stderr.resume();
-        p.on("error", reject);
-        p.on("close", (code) => code ? reject(Error("Windows \u51ED\u636E\u52A0\u5BC6/\u89E3\u5BC6\u5931\u8D25")) : resolve(decrypt ? Buffer.from(out.trim(), "base64").toString("utf8") : out.trim()));
-        p.stdin.end(decrypt ? value : Buffer.from(value, "utf8").toString("base64"));
-      });
     }
     var Store = class {
       constructor(dir = dataDir) {
@@ -136,6 +274,8 @@ var require_codex = __commonJS({
     var { spawn } = require("node:child_process");
     var readline = require("node:readline");
     var { EventEmitter } = require("node:events");
+    var { childEnvironment, codexExecutable } = require_platform();
+    var { version: version2 } = require_package();
     var CodexClient = class extends EventEmitter {
       constructor() {
         super();
@@ -147,7 +287,8 @@ var require_codex = __commonJS({
       async connect() {
         if (this.ready) return this.ready;
         this.ready = (async () => {
-          const p = spawn(process.env.CODEX_FEISHU_CODEX_PATH || "codex", ["app-server", "--stdio"], { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
+          const env = childEnvironment();
+          const p = spawn(codexExecutable(env), ["app-server", "--stdio"], { env, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
           this.proc = p;
           p.stderr.on("data", () => {
           });
@@ -169,7 +310,7 @@ var require_codex = __commonJS({
               m.error ? q.reject(Error(m.error.message)) : q.resolve(m.result);
             } else if (m.method) this.emit("notification", m);
           });
-          await this.raw("initialize", { clientInfo: { name: "codex_feishu_bridge", title: "Codex \u98DE\u4E66\u673A\u5668\u4EBA", version: "0.1.1" }, capabilities: { experimentalApi: true } });
+          await this.raw("initialize", { clientInfo: { name: "codex_feishu_bridge", title: "Codex \u98DE\u4E66\u673A\u5668\u4EBA", version: version2 }, capabilities: { experimentalApi: true } });
           this.write({ method: "initialized", params: {} });
           return true;
         })().catch((e) => {
@@ -17351,17 +17492,17 @@ var require_axios = __commonJS({
       };
     });
     var deprecatedWarnings = {};
-    validators$1.transitional = function transitional(validator2, version, message) {
+    validators$1.transitional = function transitional(validator2, version2, message) {
       function formatMessage(opt, desc) {
         return "[Axios v" + VERSION + "] Transitional option '" + opt + "'" + desc + (message ? ". " + message : "");
       }
       return (value, opt, opts) => {
         if (validator2 === false) {
-          throw new AxiosError(formatMessage(opt, " has been removed" + (version ? " in " + version : "")), AxiosError.ERR_DEPRECATED);
+          throw new AxiosError(formatMessage(opt, " has been removed" + (version2 ? " in " + version2 : "")), AxiosError.ERR_DEPRECATED);
         }
-        if (version && !deprecatedWarnings[opt]) {
+        if (version2 && !deprecatedWarnings[opt]) {
           deprecatedWarnings[opt] = true;
-          console.warn(formatMessage(opt, " has been deprecated since v" + version + " and will be removed in the near future"));
+          console.warn(formatMessage(opt, " has been deprecated since v" + version2 + " and will be removed in the near future"));
         }
         return validator2 ? validator2(value, opt, opts) : true;
       };
@@ -24955,7 +25096,7 @@ var require_websocket_server = __commonJS({
         socket.on("error", socketOnError);
         const key = req.headers["sec-websocket-key"];
         const upgrade = req.headers.upgrade;
-        const version = +req.headers["sec-websocket-version"];
+        const version2 = +req.headers["sec-websocket-version"];
         if (req.method !== "GET") {
           const message = "Invalid HTTP method";
           abortHandshakeOrEmitwsClientError(this, req, socket, 405, message);
@@ -24971,7 +25112,7 @@ var require_websocket_server = __commonJS({
           abortHandshakeOrEmitwsClientError(this, req, socket, 400, message);
           return;
         }
-        if (version !== 13 && version !== 8) {
+        if (version2 !== 13 && version2 !== 8) {
           const message = "Missing or invalid Sec-WebSocket-Version header";
           abortHandshakeOrEmitwsClientError(this, req, socket, 400, message, {
             "Sec-WebSocket-Version": "13, 8"
@@ -25015,7 +25156,7 @@ var require_websocket_server = __commonJS({
         }
         if (this.options.verifyClient) {
           const info = {
-            origin: req.headers[`${version === 8 ? "sec-websocket-origin" : "origin"}`],
+            origin: req.headers[`${version2 === 8 ? "sec-websocket-origin" : "origin"}`],
             secure: !!(req.socket.authorized || req.socket.encrypted),
             req
           };
@@ -124100,11 +124241,11 @@ var require_lib2 = __commonJS({
       const p = mvhd.start;
       if (p + 4 > buf.length)
         return void 0;
-      const version = buf.readUInt8(p);
+      const version2 = buf.readUInt8(p);
       const base = p + 4;
       let timescale;
       let duration;
-      if (version === 1) {
+      if (version2 === 1) {
         if (base + 28 > buf.length)
           return void 0;
         timescale = buf.readUInt32BE(base + 16);
@@ -126929,13 +127070,13 @@ var require_utils2 = __commonJS({
       3532,
       3706
     ];
-    exports2.getSymbolSize = function getSymbolSize(version) {
-      if (!version) throw new Error('"version" cannot be null or undefined');
-      if (version < 1 || version > 40) throw new Error('"version" should be in range from 1 to 40');
-      return version * 4 + 17;
+    exports2.getSymbolSize = function getSymbolSize(version2) {
+      if (!version2) throw new Error('"version" cannot be null or undefined');
+      if (version2 < 1 || version2 > 40) throw new Error('"version" should be in range from 1 to 40');
+      return version2 * 4 + 17;
     };
-    exports2.getSymbolTotalCodewords = function getSymbolTotalCodewords(version) {
-      return CODEWORDS_COUNT[version];
+    exports2.getSymbolTotalCodewords = function getSymbolTotalCodewords(version2) {
+      return CODEWORDS_COUNT[version2];
     };
     exports2.getBCHDigit = function(data) {
       let digit = 0;
@@ -127073,10 +127214,10 @@ var require_bit_matrix = __commonJS({
 var require_alignment_pattern = __commonJS({
   "node_modules/qrcode/lib/core/alignment-pattern.js"(exports2) {
     var getSymbolSize = require_utils2().getSymbolSize;
-    exports2.getRowColCoords = function getRowColCoords(version) {
-      if (version === 1) return [];
-      const posCount = Math.floor(version / 7) + 2;
-      const size = getSymbolSize(version);
+    exports2.getRowColCoords = function getRowColCoords(version2) {
+      if (version2 === 1) return [];
+      const posCount = Math.floor(version2 / 7) + 2;
+      const size = getSymbolSize(version2);
       const intervals = size === 145 ? 26 : Math.ceil((size - 13) / (2 * posCount - 2)) * 2;
       const positions = [size - 7];
       for (let i = 1; i < posCount - 1; i++) {
@@ -127085,9 +127226,9 @@ var require_alignment_pattern = __commonJS({
       positions.push(6);
       return positions.reverse();
     };
-    exports2.getPositions = function getPositions(version) {
+    exports2.getPositions = function getPositions(version2) {
       const coords = [];
-      const pos = exports2.getRowColCoords(version);
+      const pos = exports2.getRowColCoords(version2);
       const posLength = pos.length;
       for (let i = 0; i < posLength; i++) {
         for (let j = 0; j < posLength; j++) {
@@ -127109,8 +127250,8 @@ var require_finder_pattern = __commonJS({
   "node_modules/qrcode/lib/core/finder-pattern.js"(exports2) {
     var getSymbolSize = require_utils2().getSymbolSize;
     var FINDER_PATTERN_SIZE = 7;
-    exports2.getPositions = function getPositions(version) {
-      const size = getSymbolSize(version);
+    exports2.getPositions = function getPositions(version2) {
+      const size = getSymbolSize(version2);
       return [
         // top-left
         [0, 0],
@@ -127595,30 +127736,30 @@ var require_error_correction_code = __commonJS({
       2040,
       2430
     ];
-    exports2.getBlocksCount = function getBlocksCount(version, errorCorrectionLevel) {
+    exports2.getBlocksCount = function getBlocksCount(version2, errorCorrectionLevel) {
       switch (errorCorrectionLevel) {
         case ECLevel.L:
-          return EC_BLOCKS_TABLE[(version - 1) * 4 + 0];
+          return EC_BLOCKS_TABLE[(version2 - 1) * 4 + 0];
         case ECLevel.M:
-          return EC_BLOCKS_TABLE[(version - 1) * 4 + 1];
+          return EC_BLOCKS_TABLE[(version2 - 1) * 4 + 1];
         case ECLevel.Q:
-          return EC_BLOCKS_TABLE[(version - 1) * 4 + 2];
+          return EC_BLOCKS_TABLE[(version2 - 1) * 4 + 2];
         case ECLevel.H:
-          return EC_BLOCKS_TABLE[(version - 1) * 4 + 3];
+          return EC_BLOCKS_TABLE[(version2 - 1) * 4 + 3];
         default:
           return void 0;
       }
     };
-    exports2.getTotalCodewordsCount = function getTotalCodewordsCount(version, errorCorrectionLevel) {
+    exports2.getTotalCodewordsCount = function getTotalCodewordsCount(version2, errorCorrectionLevel) {
       switch (errorCorrectionLevel) {
         case ECLevel.L:
-          return EC_CODEWORDS_TABLE[(version - 1) * 4 + 0];
+          return EC_CODEWORDS_TABLE[(version2 - 1) * 4 + 0];
         case ECLevel.M:
-          return EC_CODEWORDS_TABLE[(version - 1) * 4 + 1];
+          return EC_CODEWORDS_TABLE[(version2 - 1) * 4 + 1];
         case ECLevel.Q:
-          return EC_CODEWORDS_TABLE[(version - 1) * 4 + 2];
+          return EC_CODEWORDS_TABLE[(version2 - 1) * 4 + 2];
         case ECLevel.H:
-          return EC_CODEWORDS_TABLE[(version - 1) * 4 + 3];
+          return EC_CODEWORDS_TABLE[(version2 - 1) * 4 + 3];
         default:
           return void 0;
       }
@@ -127730,8 +127871,8 @@ var require_reed_solomon_encoder = __commonJS({
 // node_modules/qrcode/lib/core/version-check.js
 var require_version_check = __commonJS({
   "node_modules/qrcode/lib/core/version-check.js"(exports2) {
-    exports2.isValid = function isValid(version) {
-      return !isNaN(version) && version >= 1 && version <= 40;
+    exports2.isValid = function isValid(version2) {
+      return !isNaN(version2) && version2 >= 1 && version2 <= 40;
     };
   }
 });
@@ -127792,13 +127933,13 @@ var require_mode = __commonJS({
     exports2.MIXED = {
       bit: -1
     };
-    exports2.getCharCountIndicator = function getCharCountIndicator(mode, version) {
+    exports2.getCharCountIndicator = function getCharCountIndicator(mode, version2) {
       if (!mode.ccBits) throw new Error("Invalid mode: " + mode);
-      if (!VersionCheck.isValid(version)) {
-        throw new Error("Invalid version: " + version);
+      if (!VersionCheck.isValid(version2)) {
+        throw new Error("Invalid version: " + version2);
       }
-      if (version >= 1 && version < 10) return mode.ccBits[0];
-      else if (version < 27) return mode.ccBits[1];
+      if (version2 >= 1 && version2 < 10) return mode.ccBits[0];
+      else if (version2 < 27) return mode.ccBits[1];
       return mode.ccBits[2];
     };
     exports2.getBestModeForData = function getBestModeForData(dataStr) {
@@ -127863,13 +128004,13 @@ var require_version = __commonJS({
       }
       return void 0;
     }
-    function getReservedBitsCount(mode, version) {
-      return Mode.getCharCountIndicator(mode, version) + 4;
+    function getReservedBitsCount(mode, version2) {
+      return Mode.getCharCountIndicator(mode, version2) + 4;
     }
-    function getTotalBitsFromDataArray(segments, version) {
+    function getTotalBitsFromDataArray(segments, version2) {
       let totalBits = 0;
       segments.forEach(function(data) {
-        const reservedBits = getReservedBitsCount(data.mode, version);
+        const reservedBits = getReservedBitsCount(data.mode, version2);
         totalBits += reservedBits + data.getBitsLength();
       });
       return totalBits;
@@ -127889,16 +128030,16 @@ var require_version = __commonJS({
       }
       return defaultValue;
     };
-    exports2.getCapacity = function getCapacity(version, errorCorrectionLevel, mode) {
-      if (!VersionCheck.isValid(version)) {
+    exports2.getCapacity = function getCapacity(version2, errorCorrectionLevel, mode) {
+      if (!VersionCheck.isValid(version2)) {
         throw new Error("Invalid QR Code version");
       }
       if (typeof mode === "undefined") mode = Mode.BYTE;
-      const totalCodewords = Utils.getSymbolTotalCodewords(version);
-      const ecTotalCodewords = ECCode.getTotalCodewordsCount(version, errorCorrectionLevel);
+      const totalCodewords = Utils.getSymbolTotalCodewords(version2);
+      const ecTotalCodewords = ECCode.getTotalCodewordsCount(version2, errorCorrectionLevel);
       const dataTotalCodewordsBits = (totalCodewords - ecTotalCodewords) * 8;
       if (mode === Mode.MIXED) return dataTotalCodewordsBits;
-      const usableBits = dataTotalCodewordsBits - getReservedBitsCount(mode, version);
+      const usableBits = dataTotalCodewordsBits - getReservedBitsCount(mode, version2);
       switch (mode) {
         case Mode.NUMERIC:
           return Math.floor(usableBits / 10 * 3);
@@ -127927,15 +128068,15 @@ var require_version = __commonJS({
       }
       return getBestVersionForDataLength(seg.mode, seg.getLength(), ecl);
     };
-    exports2.getEncodedBits = function getEncodedBits(version) {
-      if (!VersionCheck.isValid(version) || version < 7) {
+    exports2.getEncodedBits = function getEncodedBits(version2) {
+      if (!VersionCheck.isValid(version2) || version2 < 7) {
         throw new Error("Invalid QR Code version");
       }
-      let d = version << 12;
+      let d = version2 << 12;
       while (Utils.getBCHDigit(d) - G18_BCH >= 0) {
         d ^= G18 << Utils.getBCHDigit(d) - G18_BCH;
       }
-      return version << 12 | d;
+      return version2 << 12 | d;
     };
   }
 });
@@ -128347,7 +128488,7 @@ var require_segments = __commonJS({
       }
       return nodes;
     }
-    function buildGraph(nodes, version) {
+    function buildGraph(nodes, version2) {
       const table = {};
       const graph = { start: {} };
       let prevNodeIds = ["start"];
@@ -128367,7 +128508,7 @@ var require_segments = __commonJS({
               table[prevNodeId].lastCount += node.length;
             } else {
               if (table[prevNodeId]) table[prevNodeId].lastCount = node.length;
-              graph[prevNodeId][key] = getSegmentBitsLength(node.length, node.mode) + 4 + Mode.getCharCountIndicator(node.mode, version);
+              graph[prevNodeId][key] = getSegmentBitsLength(node.length, node.mode) + 4 + Mode.getCharCountIndicator(node.mode, version2);
             }
           }
         }
@@ -128409,10 +128550,10 @@ var require_segments = __commonJS({
         return acc;
       }, []);
     };
-    exports2.fromString = function fromString(data, version) {
+    exports2.fromString = function fromString(data, version2) {
       const segs = getSegmentsFromString(data, Utils.isKanjiModeEnabled());
       const nodes = buildNodes(segs);
-      const graph = buildGraph(nodes, version);
+      const graph = buildGraph(nodes, version2);
       const path2 = dijkstra.find_path(graph.map, "start", "end");
       const optimizedSegs = [];
       for (let i = 1; i < path2.length - 1; i++) {
@@ -128444,9 +128585,9 @@ var require_qrcode = __commonJS({
     var FormatInfo = require_format_info();
     var Mode = require_mode();
     var Segments = require_segments();
-    function setupFinderPattern(matrix, version) {
+    function setupFinderPattern(matrix, version2) {
       const size = matrix.size;
-      const pos = FinderPattern.getPositions(version);
+      const pos = FinderPattern.getPositions(version2);
       for (let i = 0; i < pos.length; i++) {
         const row = pos[i][0];
         const col = pos[i][1];
@@ -128471,8 +128612,8 @@ var require_qrcode = __commonJS({
         matrix.set(6, r, value, true);
       }
     }
-    function setupAlignmentPattern(matrix, version) {
-      const pos = AlignmentPattern.getPositions(version);
+    function setupAlignmentPattern(matrix, version2) {
+      const pos = AlignmentPattern.getPositions(version2);
       for (let i = 0; i < pos.length; i++) {
         const row = pos[i][0];
         const col = pos[i][1];
@@ -128487,9 +128628,9 @@ var require_qrcode = __commonJS({
         }
       }
     }
-    function setupVersionInfo(matrix, version) {
+    function setupVersionInfo(matrix, version2) {
       const size = matrix.size;
-      const bits = Version.getEncodedBits(version);
+      const bits = Version.getEncodedBits(version2);
       let row, col, mod;
       for (let i = 0; i < 18; i++) {
         row = Math.floor(i / 3);
@@ -128554,15 +128695,15 @@ var require_qrcode = __commonJS({
         }
       }
     }
-    function createData(version, errorCorrectionLevel, segments) {
+    function createData(version2, errorCorrectionLevel, segments) {
       const buffer = new BitBuffer();
       segments.forEach(function(data) {
         buffer.put(data.mode.bit, 4);
-        buffer.put(data.getLength(), Mode.getCharCountIndicator(data.mode, version));
+        buffer.put(data.getLength(), Mode.getCharCountIndicator(data.mode, version2));
         data.write(buffer);
       });
-      const totalCodewords = Utils.getSymbolTotalCodewords(version);
-      const ecTotalCodewords = ECCode.getTotalCodewordsCount(version, errorCorrectionLevel);
+      const totalCodewords = Utils.getSymbolTotalCodewords(version2);
+      const ecTotalCodewords = ECCode.getTotalCodewordsCount(version2, errorCorrectionLevel);
       const dataTotalCodewordsBits = (totalCodewords - ecTotalCodewords) * 8;
       if (buffer.getLengthInBits() + 4 <= dataTotalCodewordsBits) {
         buffer.put(0, 4);
@@ -128574,13 +128715,13 @@ var require_qrcode = __commonJS({
       for (let i = 0; i < remainingByte; i++) {
         buffer.put(i % 2 ? 17 : 236, 8);
       }
-      return createCodewords(buffer, version, errorCorrectionLevel);
+      return createCodewords(buffer, version2, errorCorrectionLevel);
     }
-    function createCodewords(bitBuffer, version, errorCorrectionLevel) {
-      const totalCodewords = Utils.getSymbolTotalCodewords(version);
-      const ecTotalCodewords = ECCode.getTotalCodewordsCount(version, errorCorrectionLevel);
+    function createCodewords(bitBuffer, version2, errorCorrectionLevel) {
+      const totalCodewords = Utils.getSymbolTotalCodewords(version2);
+      const ecTotalCodewords = ECCode.getTotalCodewordsCount(version2, errorCorrectionLevel);
       const dataTotalCodewords = totalCodewords - ecTotalCodewords;
-      const ecTotalBlocks = ECCode.getBlocksCount(version, errorCorrectionLevel);
+      const ecTotalBlocks = ECCode.getBlocksCount(version2, errorCorrectionLevel);
       const blocksInGroup2 = totalCodewords % ecTotalBlocks;
       const blocksInGroup1 = ecTotalBlocks - blocksInGroup2;
       const totalCodewordsInGroup1 = Math.floor(totalCodewords / ecTotalBlocks);
@@ -128617,12 +128758,12 @@ var require_qrcode = __commonJS({
       }
       return data;
     }
-    function createSymbol(data, version, errorCorrectionLevel, maskPattern) {
+    function createSymbol(data, version2, errorCorrectionLevel, maskPattern) {
       let segments;
       if (Array.isArray(data)) {
         segments = Segments.fromArray(data);
       } else if (typeof data === "string") {
-        let estimatedVersion = version;
+        let estimatedVersion = version2;
         if (!estimatedVersion) {
           const rawSegments = Segments.rawSplit(data);
           estimatedVersion = Version.getBestVersionForData(rawSegments, errorCorrectionLevel);
@@ -128635,22 +128776,22 @@ var require_qrcode = __commonJS({
       if (!bestVersion) {
         throw new Error("The amount of data is too big to be stored in a QR Code");
       }
-      if (!version) {
-        version = bestVersion;
-      } else if (version < bestVersion) {
+      if (!version2) {
+        version2 = bestVersion;
+      } else if (version2 < bestVersion) {
         throw new Error(
           "\nThe chosen QR Code version cannot contain this amount of data.\nMinimum version required to store current data is: " + bestVersion + ".\n"
         );
       }
-      const dataBits = createData(version, errorCorrectionLevel, segments);
-      const moduleCount = Utils.getSymbolSize(version);
+      const dataBits = createData(version2, errorCorrectionLevel, segments);
+      const moduleCount = Utils.getSymbolSize(version2);
       const modules = new BitMatrix(moduleCount);
-      setupFinderPattern(modules, version);
+      setupFinderPattern(modules, version2);
       setupTimingPattern(modules);
-      setupAlignmentPattern(modules, version);
+      setupAlignmentPattern(modules, version2);
       setupFormatInfo(modules, errorCorrectionLevel, 0);
-      if (version >= 7) {
-        setupVersionInfo(modules, version);
+      if (version2 >= 7) {
+        setupVersionInfo(modules, version2);
       }
       setupData(modules, dataBits);
       if (isNaN(maskPattern)) {
@@ -128663,7 +128804,7 @@ var require_qrcode = __commonJS({
       setupFormatInfo(modules, errorCorrectionLevel, maskPattern);
       return {
         modules,
-        version,
+        version: version2,
         errorCorrectionLevel,
         maskPattern,
         segments
@@ -128674,17 +128815,17 @@ var require_qrcode = __commonJS({
         throw new Error("No input text");
       }
       let errorCorrectionLevel = ECLevel.M;
-      let version;
+      let version2;
       let mask;
       if (typeof options !== "undefined") {
         errorCorrectionLevel = ECLevel.from(options.errorCorrectionLevel, ECLevel.M);
-        version = Version.from(options.version);
+        version2 = Version.from(options.version);
         mask = MaskPattern.from(options.maskPattern);
         if (options.toSJISFunc) {
           Utils.setToSJISFunction(options.toSJISFunc);
         }
       }
-      return createSymbol(data, version, errorCorrectionLevel, mask);
+      return createSymbol(data, version2, errorCorrectionLevel, mask);
     };
   }
 });
@@ -132023,6 +132164,8 @@ var require_service2 = __commonJS({
     var { Store, dataDir, atomic } = require_store();
     var { CodexClient } = require_codex();
     var { Bridge } = require_bridge();
+    var { browserCommand } = require_platform();
+    var { version: version2 } = require_package();
     var PORT = Number(process.env.CODEX_FEISHU_PORT || 23947);
     var runtimePath = path2.join(dataDir, "runtime.json");
     var root2 = path2.resolve(__dirname, "..");
@@ -132047,8 +132190,8 @@ var require_service2 = __commonJS({
         return info;
       } catch {
       }
-      fs2.mkdirSync(dataDir, { recursive: true });
-      const fd = fs2.openSync(path2.join(dataDir, "service.log"), "a");
+      fs2.mkdirSync(dataDir, { recursive: true, mode: 448 });
+      const fd = fs2.openSync(path2.join(dataDir, "service.log"), "a", 384);
       const child = spawn(process.execPath, [path2.join(root2, "dist/main.cjs"), "serve"], { detached: true, windowsHide: true, stdio: ["ignore", fd, fd], env: process.env });
       child.unref();
       fs2.closeSync(fd);
@@ -132194,7 +132337,7 @@ var require_service2 = __commonJS({
         process.exit(1);
       });
       server.listen(PORT, "127.0.0.1", () => {
-        atomic(runtimePath, { port: PORT, token, pid: process.pid, version: "0.1.1" });
+        atomic(runtimePath, { port: PORT, token, pid: process.pid, version: version2 });
         bridge.start();
         console.log("Codex Feishu service listening on 127.0.0.1:" + PORT);
       });
@@ -132209,9 +132352,9 @@ var require_service2 = __commonJS({
       process.on("SIGINT", shutdown);
     }
     function openBrowser2(url) {
-      const script = "Start-Process -FilePath $env:CODEX_FEISHU_OPEN_URL";
+      const { command, args, env } = browserCommand(url);
       return new Promise((resolve, reject) => {
-        const p = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], { windowsHide: true, stdio: "ignore", env: { ...process.env, CODEX_FEISHU_OPEN_URL: url } });
+        const p = spawn(command, args, { windowsHide: true, stdio: "ignore", env });
         p.on("error", reject);
         p.on("exit", (code) => code ? reject(Error("\u65E0\u6CD5\u6253\u5F00\u9ED8\u8BA4\u6D4F\u89C8\u5668")) : resolve());
       });
@@ -133290,11 +133433,11 @@ var require_types = __commonJS({
       regex = `${regex}(${opts.join("|")})`;
       return new RegExp(`^${regex}$`);
     }
-    function isValidIP(ip, version) {
-      if ((version === "v4" || !version) && ipv4Regex.test(ip)) {
+    function isValidIP(ip, version2) {
+      if ((version2 === "v4" || !version2) && ipv4Regex.test(ip)) {
         return true;
       }
-      if ((version === "v6" || !version) && ipv6Regex.test(ip)) {
+      if ((version2 === "v6" || !version2) && ipv6Regex.test(ip)) {
         return true;
       }
       return false;
@@ -133321,11 +133464,11 @@ var require_types = __commonJS({
         return false;
       }
     }
-    function isValidCidr(ip, version) {
-      if ((version === "v4" || !version) && ipv4CidrRegex.test(ip)) {
+    function isValidCidr(ip, version2) {
+      if ((version2 === "v4" || !version2) && ipv4CidrRegex.test(ip)) {
         return true;
       }
-      if ((version === "v6" || !version) && ipv6CidrRegex.test(ip)) {
+      if ((version2 === "v6" || !version2) && ipv6CidrRegex.test(ip)) {
         return true;
       }
       return false;
@@ -138100,10 +138243,10 @@ var require_regexes = __commonJS({
     exports2.duration = /^P(?:(\d+W)|(?!.*W)(?=\d|T\d)(\d+Y)?(\d+M)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+([.,]\d+)?S)?)?)$/;
     exports2.extendedDuration = /^[-+]?P(?!$)(?:(?:[-+]?\d+Y)|(?:[-+]?\d+[.,]\d+Y$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:(?:[-+]?\d+W)|(?:[-+]?\d+[.,]\d+W$))?(?:(?:[-+]?\d+D)|(?:[-+]?\d+[.,]\d+D$))?(?:T(?=[\d+-])(?:(?:[-+]?\d+H)|(?:[-+]?\d+[.,]\d+H$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:[-+]?\d+(?:[.,]\d+)?S)?)??$/;
     exports2.guid = /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/;
-    var uuid = (version) => {
-      if (!version)
+    var uuid = (version2) => {
+      if (!version2)
         return /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/;
-      return new RegExp(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-${version}[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$`);
+      return new RegExp(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-${version2}[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$`);
     };
     exports2.uuid = uuid;
     exports2.uuid4 = (0, exports2.uuid)(4);
@@ -161367,10 +161510,10 @@ var require_from_json_schema = __commonJS({
       } catch {
         throw new Error("fromJSONSchema input is not valid JSON (possibly cyclic); use $defs/$ref for recursive schemas");
       }
-      const version = detectVersion(normalized, params?.defaultTarget);
+      const version2 = detectVersion(normalized, params?.defaultTarget);
       const defs = normalized.$defs || normalized.definitions || {};
       const ctx = {
-        version,
+        version: version2,
         defs,
         refs: /* @__PURE__ */ new Map(),
         processing: /* @__PURE__ */ new Set(),
@@ -174396,6 +174539,7 @@ var require_stdio2 = __commonJS({
 // src/main.cjs
 var fs = require("node:fs");
 var path = require("node:path");
+var { version } = require_package();
 var { serve, ensureDaemon, apiCall, openBrowser, root, runtime } = require_service2();
 var { Server } = require_server3();
 var { StdioServerTransport } = require_stdio2();
@@ -174409,7 +174553,7 @@ var tools = [
   { name: "feishu_ui", title: "\u673A\u5668\u4EBA\u754C\u9762\u64CD\u4F5C", description: "\u7BA1\u7406\u754C\u9762\u4E13\u7528\u64CD\u4F5C\u3002", inputSchema: { type: "object", properties: { action: { type: "string", enum: actions }, args: { type: "object" } }, required: ["action", "args"], additionalProperties: false }, annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true }, _meta: { ui: { visibility: ["app"] } } }
 ];
 async function mcp() {
-  const server = new Server({ name: "codex-feishu-bot", version: "0.1.1" }, { capabilities: { tools: {}, resources: {}, extensions: { "io.modelcontextprotocol/ui": {} } } });
+  const server = new Server({ name: "codex-feishu-bot", version }, { capabilities: { tools: {}, resources: {}, extensions: { "io.modelcontextprotocol/ui": {} } } });
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: [{ uri: UI, name: "\u98DE\u4E66\u673A\u5668\u4EBA\u7BA1\u7406", mimeType: "text/html;profile=mcp-app" }] }));
   server.setRequestHandler(ReadResourceRequestSchema, async (req) => {

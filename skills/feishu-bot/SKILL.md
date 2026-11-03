@@ -5,7 +5,9 @@ description: 管理本机 Codex 飞书/Lark 机器人，扫码关联、配置项
 
 使用 `feishu_dashboard` 打开机器人管理界面。使用 `feishu_status` 读取连接状态，`feishu_manage` 执行用户要求的配置操作。
 
-这个插件运行在 Windows 本机。它使用飞书官方 WebSocket SDK 和 Codex App Server。首次关联需要用户扫描管理界面的二维码并在飞书确认；模型不能替用户完成扫码。不要要求用户把 App Secret 粘贴到聊天里，手动凭据在管理界面输入，通过 Windows DPAPI 加密保存在本机。
+这个插件运行在 Windows 或 macOS 本机，使用飞书官方 WebSocket SDK 和 Codex App Server。首次关联需要用户扫描管理界面的二维码并在飞书确认；模型不能替用户完成扫码。不要要求用户把 App Secret 粘贴到聊天里，手动凭据在管理界面输入。Windows 使用 DPAPI；macOS 使用 AES-256-GCM 加密，密钥保存在当前用户的系统钥匙串中。不能把 Windows 的密文复制到 Mac 后直接使用，需要重新关联。
+
+macOS 可以双击仓库中的 `安装到Codex.command` 安装，`启动机器人管理.command` 打开管理页，`停止机器人服务.command` 停止服务。macOS 默认数据目录为 `~/Library/Application Support/CodexFeishuBridge`；已有旧版数据时继续使用原目录。钥匙串被锁定或拒绝访问时，让用户解锁并重试，不要改成明文保存，不要重置或覆盖已有加密密钥。
 
 项目必须在管理界面添加后才能被机器人使用。`allowedProjects: ["*"]` 表示所有已配置的项目，不代表整个磁盘。添加项目时使用用户指定或 Codex 项目列表中的真实绝对路径。
 

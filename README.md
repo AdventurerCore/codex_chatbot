@@ -1,10 +1,12 @@
 # Codex 飞书机器人
 
-参考本机 ZCode 3.17.2 的飞书机器人协议与界面，独立实现的 Windows 本地 Codex 插件。源码、已构建运行文件和测试均包含在目录内。
+参考本机 ZCode 3.17.2 的飞书机器人协议与界面，独立实现的 Windows / macOS 本地 Codex 插件。源码、已构建运行文件和测试均包含在目录内。
 
 ## 安装与使用
 
-需要 Windows、Node.js 22+ 和已登录的 Codex CLI，且 `node`、`codex` 已加入 `PATH`。
+需要 Windows 或 macOS、Node.js 22+ 和已登录的 Codex CLI，且 `node`、`codex` 已加入 `PATH`。macOS 凭据存储使用系统自带的钥匙串，无需额外安装依赖。
+
+Windows：
 
 ```powershell
 git clone git@github.com:AdventurerCore/codex_chatbot.git
@@ -12,17 +14,27 @@ cd codex_chatbot
 .\安装到Codex.cmd
 ```
 
+macOS：
+
+```sh
+git clone https://github.com/AdventurerCore/codex_chatbot.git
+cd codex_chatbot
+./安装到Codex.command
+```
+
+macOS 也可在 Finder 中双击 `安装到Codex.command`。启动器会补查 Apple Silicon 和 Intel Homebrew 的常见工具路径。若已经从本仓库的 Git 地址安装了 `local-feishu` 市场，macOS 安装器会刷新原市场并升级插件，保留原更新来源。
+
 安装脚本会注册仓库中的本地插件市场，安装 `codex-feishu-bot@local-feishu`，并打开机器人管理页。仓库包含已构建的运行文件，使用时无需先执行 `npm install`。
 
 也可手动安装：
 
-```powershell
+```sh
 codex plugin marketplace add .
 codex plugin add codex-feishu-bot@local-feishu
 node dist/main.cjs dashboard
 ```
 
-1. 双击 `启动机器人管理.cmd`，打开本机管理页。
+1. 双击 `启动机器人管理.cmd`（Windows）或 `启动机器人管理.command`（macOS），打开本机管理页。
 2. 选择机器人，点击 **扫码关联**，用手机飞书扫码并确认创建应用。也可在 **手动配置** 中填写自己的 App ID / App Secret。
 3. 点击右上角齿轮添加允许机器人访问的项目文件夹，重复路径自动合并。首次使用需要自行配置项目。
 4. 私聊新机器人，发送 `/workspace`，再发送 `/workspace 1` 选择项目。
@@ -43,7 +55,7 @@ node dist/main.cjs dashboard
 | 群聊 | 绑定用户 @当前机器人 `/enable`，`/disable` 停用，话题分别保存会话 |
 | Codex | 新会话、已有项目会话接续、模型与推理强度切换、停止任务 |
 | 审批 | 命令、文件审批通过飞书按钮或指令答复；用户问题通过 `/answer` 回复 |
-| 凭据 | Windows DPAPI CurrentUser 加密，仅保存在本机数据目录 |
+| 凭据 | Windows 使用 DPAPI CurrentUser；macOS 使用 AES-256-GCM，密钥保存在当前用户的系统钥匙串 |
 
 输入支持文字与富文本。当前未实现图片、附件和语音传输；群聊只接受绑定用户，不开放给其他群成员。手机网页远程桌面镜像、微信、Telegram 不包含在此飞书插件中。
 
@@ -80,9 +92,11 @@ node dist/main.cjs dashboard
 
 ## 运行与数据
 
-后台服务仅监听 `127.0.0.1:23947`，不会开启公网端口或配置开机启动。关闭网页不会关闭机器人服务。双击 `停止机器人服务.cmd` 停止。
+后台服务仅监听 `127.0.0.1:23947`，不会开启公网端口或配置开机启动。关闭网页不会关闭机器人服务。双击 `停止机器人服务.cmd`（Windows）或 `停止机器人服务.command`（macOS）停止。
 
-状态位于 `%LOCALAPPDATA%\CodexFeishuBridge`：`state.json` 保存机器人、项目、会话和加密后的密钥；`runtime.json` 保存本机管理服务的访问令牌；`service.log` 保存简要日志。不要分享这些运行文件。
+Windows 状态位于 `%LOCALAPPDATA%\CodexFeishuBridge`，macOS 默认位于 `~/Library/Application Support/CodexFeishuBridge`。若 Mac 已有旧版 `~/.local/share/CodexFeishuBridge/state.json`，且新目录没有状态文件，则继续使用旧目录；`CODEX_FEISHU_DATA_DIR` 可指定数据目录。`state.json` 保存机器人、项目、会话和加密后的凭据；`runtime.json` 保存本机管理服务的访问令牌；`service.log` 保存简要日志。不要分享这些运行文件。
+
+macOS 的加密密钥保存在钥匙串的 `com.adventurercore.codex-feishu-bot` 服务中，凭据文件使用随机 nonce 和认证标签保护。密钥通过进程标准输入交给系统工具，不出现在命令行参数中。钥匙串锁定或拒绝访问时会报错，不会改成明文保存或覆盖已有密钥。若 macOS 提示访问钥匙串，请允许访问；若登录钥匙串被锁定，请先在系统中解锁。Windows 与 macOS 的密文不能互换，换机器或系统后应重新扫码关联。
 
 消息去重持久化，SDK 收到事件后立即确认，再异步处理，避免长任务导致飞书重复投递。审批与机器人、聊天和绑定用户一致才可通过；审批 10 分钟后过期。停止、解绑和项目范围修改会中断当前任务。
 
@@ -97,9 +111,19 @@ npm run build
 node dist/main.cjs diagnose
 ```
 
-`scripts/build.cjs` 生成单文件 MCP / 后台服务与自包含 HTML 面板。更改源码后重新构建，同步更新 `package.json`、`package-lock.json`、`plugin.json` 和 `.codex-plugin/plugin.json` 的版本，再运行仓库根目录的 `安装到Codex.cmd` 重新安装。不要直接修改 Codex 插件缓存。
+`scripts/build.cjs` 生成单文件 MCP / 后台服务与自包含 HTML 面板。更改源码后重新构建，同步更新 `package.json`、`package-lock.json`、`plugin.json` 和 `.codex-plugin/plugin.json` 的版本，再运行当前系统对应的安装脚本重新安装。更新前先停止旧版机器人服务；重新安装后打开管理页。不要直接修改 Codex 插件缓存。
 
-已验证：17 项自动化测试、Windows DPAPI、真实 Codex 登录检查、MCP 工具发现及状态调用、管理页面、真实飞书扫码关联与 WebSocket 长连接。2026-11-03 的真实收发测试中，用户发送“只回复：飞书连接成功，不修改任何文件”，Codex 约 7 秒完成，飞书 JSON 2.0 卡片显示“飞书连接成功”；该轮没有工具调用或文件修改。
+本地开发时，若 `local-feishu` 已注册为 Git 市场，而要安装尚未推送的本地修改，请先 `codex plugin marketplace remove local-feishu`，再 `codex plugin marketplace add .`，之后重新安装插件。普通 Git 安装更新可直接 `codex plugin marketplace upgrade local-feishu`、`codex plugin add codex-feishu-bot@local-feishu`。
+
+在 macOS 上测试真实钥匙串读写：
+
+```sh
+CODEX_FEISHU_TEST_KEYCHAIN=1 npm test
+```
+
+该测试使用独立的临时钥匙串条目，并在结束后删除；普通 `npm test` 不访问真实钥匙串。macOS 适配测试覆盖加密与重启后解密、密文篡改、钥匙串拒绝访问、密钥缺失、并发首次保存、旧数据路径、Homebrew 路径及浏览器启动参数。Windows 原生 DPAPI 测试只在 Windows 上执行。
+
+Windows 原版已验证：17 项自动化测试、Windows DPAPI、真实 Codex 登录检查、MCP 工具发现及状态调用、管理页面、真实飞书扫码关联与 WebSocket 长连接。2026-11-03 的真实收发测试中，用户发送“只回复：飞书连接成功，不修改任何文件”，Codex 约 7 秒完成，飞书 JSON 2.0 卡片显示“飞书连接成功”；该轮没有工具调用或文件修改。此记录不代表 macOS 端已经完成真实飞书收发验证；Mac 首次使用仍需用户扫码授权。
 
 群聊、真实文件修改审批和长时间断网重连尚未做端到端现场验证，相关权限与协议行为已有自动化测试覆盖。
 

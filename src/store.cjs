@@ -1,28 +1,18 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const os = require('node:os');
 const crypto = require('node:crypto');
-const {spawn} = require('node:child_process');
+const {getDataDir} = require('./platform.cjs');
+const {secretTransform} = require('./credentials.cjs');
 
-const dataDir = process.env.CODEX_FEISHU_DATA_DIR || path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), '.local/share'), 'CodexFeishuBridge');
+const dataDir = getDataDir();
 function atomic(file, value) {
-  fs.mkdirSync(path.dirname(file), {recursive:true});
+  fs.mkdirSync(path.dirname(file), {recursive:true,mode:0o700});
   const temp=file+'.'+crypto.randomUUID()+'.tmp';
   fs.writeFileSync(temp,JSON.stringify(value,null,2),{mode:0o600});
   fs.renameSync(temp,file);
 }
 function canonical(p) { return fs.realpathSync.native(path.resolve(p)); }
 function samePath(a,b) { const normalize=p=>process.platform==='win32'?p.toLowerCase():p;return normalize(canonical(a))===normalize(canonical(b)); }
-function secretTransform(value, decrypt=false) {
-  if(process.platform!=='win32') throw Error('此版本使用 Windows DPAPI 保存凭据，需要 Windows。');
-  const script="Add-Type -AssemblyName System.Security; $s=[Console]::In.ReadToEnd(); $b=[Convert]::FromBase64String($s); $r=[Security.Cryptography.ProtectedData]::"+(decrypt?'Unprotect':'Protect')+"($b,$null,[Security.Cryptography.DataProtectionScope]::CurrentUser); [Console]::Out.Write([Convert]::ToBase64String($r))";
-  return new Promise((resolve,reject)=>{
-    const p=spawn('powershell.exe',['-NoProfile','-NonInteractive','-Command',script],{windowsHide:true,stdio:['pipe','pipe','pipe']});
-    let out='';p.stdout.on('data',b=>out+=b);p.stderr.resume();p.on('error',reject);
-    p.on('close',code=>code?reject(Error('Windows 凭据加密/解密失败')):resolve(decrypt?Buffer.from(out.trim(),'base64').toString('utf8'):out.trim()));
-    p.stdin.end(decrypt?value:Buffer.from(value,'utf8').toString('base64'));
-  });
-}
 class Store {
   constructor(dir=dataDir) {
     this.dir=dir;this.file=path.join(dir,'state.json');
