@@ -12,7 +12,7 @@ var require_package = __commonJS({
   "package.json"(exports2, module2) {
     module2.exports = {
       name: "codex-feishu-bot",
-      version: "0.1.2",
+      version: "0.1.3",
       private: true,
       license: "Apache-2.0",
       description: "Local Feishu/Lark bot channel for Codex",
@@ -131889,8 +131889,8 @@ var require_bridge = __commonJS({
             await reply(`\u9879\u76EE\uFF1A${this.store.state.projects.find((p) => p.id === s.projectId)?.name || "\u672A\u9009\u62E9"}
 \u4F1A\u8BDD\uFF1A${s.threadId || "\u672A\u5F00\u59CB"}
 \u72B6\u6001\uFF1A${a ? "\u5904\u7406\u4E2D" : "\u7A7A\u95F2"}
-\u6A21\u578B\uFF1A${s.model || "Codex \u9ED8\u8BA4"}
-\u63A8\u7406\u5F3A\u5EA6\uFF1A${s.effort || "\u9ED8\u8BA4"}`);
+\u6A21\u578B\uFF1A${s.model || s.effectiveModel || "\u8D26\u53F7\u9ED8\u8BA4"}
+\u63A8\u7406\u5F3A\u5EA6\uFF1A${s.effort || s.effectiveEffort || "\u8D26\u53F7\u9ED8\u8BA4"}`);
             return;
           }
           if (["/approve", "/deny", "/answer"].includes(cmd)) {
@@ -131982,27 +131982,46 @@ ${String(x.name || x.preview || "\u672A\u547D\u540D").slice(0, 80)}`).join("\n\n
           await reply("\u5904\u7406\u5931\u8D25\uFF1A" + err.message);
         }
       }
+      async modelSettings(session) {
+        const [{ data: models = [] }, { config = {} }] = await Promise.all([
+          this.codex.request("model/list", { includeHidden: true }),
+          this.codex.request("config/read", { includeLayers: false })
+        ]);
+        const requested = session.model || config.model;
+        let entry = models.find((model) => model.model === requested || model.id === requested);
+        if (!entry && session.model) throw Error(`\u5F53\u524D\u8D26\u53F7\u4E0D\u652F\u6301\u6A21\u578B ${session.model}\uFF0C\u8BF7\u53D1\u9001 /model \u67E5\u770B\u53EF\u7528\u6A21\u578B\u3002`);
+        entry ??= models.find((model) => model.isDefault) || models.find((model) => !model.hidden) || models[0];
+        if (!entry) throw Error("\u5F53\u524D\u8D26\u53F7\u6CA1\u6709\u53EF\u7528\u6A21\u578B\uFF0C\u8BF7\u68C0\u67E5 Codex \u767B\u5F55\u72B6\u6001\u3002");
+        const supported = (entry.supportedReasoningEfforts || []).map((option) => option.reasoningEffort);
+        if (session.effort && supported.length && !supported.includes(session.effort)) throw Error(`\u5F53\u524D\u6A21\u578B\u4E0D\u652F\u6301\u63A8\u7406\u5F3A\u5EA6 ${session.effort}\uFF0C\u53EF\u9009\uFF1A${supported.join("\u3001")}\u3002`);
+        const preferred = session.effort || config.model_reasoning_effort;
+        const effort = supported.includes(preferred) ? preferred : entry.defaultReasoningEffort || supported[0];
+        return { model: entry.model || entry.id, ...effort ? { effort } : {} };
+      }
       async run(key, bot, s, project, e, t) {
         const a = { key, bot, session: s, event: e, t, startedAt: Date.now(), messages: /* @__PURE__ */ new Map(), tools: [], turnId: null, stream: null, finished: false };
         this.active.set(key, a);
         try {
           a.stream = await t.stream(e.chatId, e.messageId, !!e.topic);
+          const settings = await this.modelSettings(s), modelConfig = { model: settings.model, ...settings.effort ? { config: { model_reasoning_effort: settings.effort } } : {} };
           if (!s.threadId) {
-            const r2 = await this.codex.request("thread/start", { cwd: project.path, approvalPolicy: "on-request", sandbox: "workspace-write", ...s.model ? { model: s.model } : {}, serviceName: "codex-feishu-bridge" });
+            const r2 = await this.codex.request("thread/start", { cwd: project.path, approvalPolicy: "on-request", sandbox: "workspace-write", ...modelConfig, serviceName: "codex-feishu-bridge" });
             s.threadId = r2.thread.id;
-            this.store.save();
           } else {
             const r2 = await this.codex.request("thread/read", { threadId: s.threadId, includeTurns: false });
             if (!samePath(r2.thread.cwd, project.path)) throw Error("\u4F1A\u8BDD\u76EE\u5F55\u4E0D\u5C5E\u4E8E\u5F53\u524D\u9879\u76EE");
-            await this.codex.request("thread/resume", { threadId: s.threadId, excludeTurns: true, cwd: project.path, approvalPolicy: "on-request", sandbox: "workspace-write" });
+            await this.codex.request("thread/resume", { threadId: s.threadId, excludeTurns: true, cwd: project.path, approvalPolicy: "on-request", sandbox: "workspace-write", ...modelConfig });
           }
+          s.effectiveModel = settings.model;
+          s.effectiveEffort = settings.effort || null;
+          this.store.save();
           this.byThread.set(s.threadId, a);
           if (a.cancelled) {
             await this.finish(a, "interrupted");
             return;
           }
           a.timer = setInterval(() => this.flush(a).catch((err) => this.log("stream", err)), 1e3);
-          const r = await this.codex.request("turn/start", { threadId: s.threadId, input: [{ type: "text", text: e.text, text_elements: [] }], ...s.model ? { model: s.model } : {}, ...s.effort ? { effort: s.effort } : {} });
+          const r = await this.codex.request("turn/start", { threadId: s.threadId, input: [{ type: "text", text: e.text, text_elements: [] }], ...settings });
           a.turnId = r.turn.id;
           if (a.cancelled && !a.finished) await this.codex.request("turn/interrupt", { threadId: s.threadId, turnId: a.turnId });
         } catch (err) {

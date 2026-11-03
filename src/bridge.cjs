@@ -63,7 +63,7 @@ class Bridge {
     const key=sessionKey(botId,e);let s=this.store.state.sessions[key];if(!s){s={botId,chatId:e.chatId,topic:e.topic,projectId:null,threadId:null};this.store.state.sessions[key]=s;}
     try{
       if(cmd==='/help'){await reply(HELP);return;}
-      if(cmd==='/status'){const a=this.active.get(key);await reply(`项目：${this.store.state.projects.find(p=>p.id===s.projectId)?.name||'未选择'}\n会话：${s.threadId||'未开始'}\n状态：${a?'处理中':'空闲'}\n模型：${s.model||'Codex 默认'}\n推理强度：${s.effort||'默认'}`);return;}
+      if(cmd==='/status'){const a=this.active.get(key);await reply(`项目：${this.store.state.projects.find(p=>p.id===s.projectId)?.name||'未选择'}\n会话：${s.threadId||'未开始'}\n状态：${a?'处理中':'空闲'}\n模型：${s.model||s.effectiveModel||'账号默认'}\n推理强度：${s.effort||s.effectiveEffort||'账号默认'}`);return;}
       if(['/approve','/deny','/answer'].includes(cmd)){await reply(await this.resolvePending(botId,e.chatId,e.sender,args[0],cmd==='/approve'?'accept':cmd==='/deny'?'decline':'answer',args.slice(1).join(' ')));return;}
       if(cmd==='/stop'){const a=this.active.get(key);if(a?.turnId)await this.codex.request('turn/interrupt',{threadId:s.threadId,turnId:a.turnId});else if(a)a.cancelled=true;await reply(a?'已请求停止。':'当前没有运行中的任务。');return;}
       if(this.active.has(key)){await reply('当前任务仍在运行。可以发送 /stop 停止，完成后再发送新需求。');return;}
@@ -87,16 +87,34 @@ class Bridge {
       await this.run(key,bot,s,project,e,t);
     }catch(err){this.log('message',err);await reply('处理失败：'+err.message);}
   }
+  async modelSettings(session){
+    const [{data:models=[]},{config={}}]=await Promise.all([
+      this.codex.request('model/list',{includeHidden:true}),
+      this.codex.request('config/read',{includeLayers:false})
+    ]);
+    const requested=session.model||config.model;
+    let entry=models.find(model=>model.model===requested||model.id===requested);
+    if(!entry&&session.model)throw Error(`当前账号不支持模型 ${session.model}，请发送 /model 查看可用模型。`);
+    entry??=models.find(model=>model.isDefault)||models.find(model=>!model.hidden)||models[0];
+    if(!entry)throw Error('当前账号没有可用模型，请检查 Codex 登录状态。');
+    const supported=(entry.supportedReasoningEfforts||[]).map(option=>option.reasoningEffort);
+    if(session.effort&&supported.length&&!supported.includes(session.effort))throw Error(`当前模型不支持推理强度 ${session.effort}，可选：${supported.join('、')}。`);
+    const preferred=session.effort||config.model_reasoning_effort;
+    const effort=supported.includes(preferred)?preferred:entry.defaultReasoningEffort||supported[0];
+    return {model:entry.model||entry.id,...(effort?{effort}:{})};
+  }
   async run(key,bot,s,project,e,t){
     const a={key,bot,session:s,event:e,t,startedAt:Date.now(),messages:new Map(),tools:[],turnId:null,stream:null,finished:false};this.active.set(key,a);
     try {
       a.stream=await t.stream(e.chatId,e.messageId,!!e.topic);
-      if(!s.threadId){const r=await this.codex.request('thread/start',{cwd:project.path,approvalPolicy:'on-request',sandbox:'workspace-write',...(s.model?{model:s.model}:{}),serviceName:'codex-feishu-bridge'});s.threadId=r.thread.id;this.store.save();}
-      else {const r=await this.codex.request('thread/read',{threadId:s.threadId,includeTurns:false});if(!samePath(r.thread.cwd,project.path))throw Error('会话目录不属于当前项目');await this.codex.request('thread/resume',{threadId:s.threadId,excludeTurns:true,cwd:project.path,approvalPolicy:'on-request',sandbox:'workspace-write'});}
+      const settings=await this.modelSettings(s),modelConfig={model:settings.model,...(settings.effort?{config:{model_reasoning_effort:settings.effort}}:{})};
+      if(!s.threadId){const r=await this.codex.request('thread/start',{cwd:project.path,approvalPolicy:'on-request',sandbox:'workspace-write',...modelConfig,serviceName:'codex-feishu-bridge'});s.threadId=r.thread.id;}
+      else {const r=await this.codex.request('thread/read',{threadId:s.threadId,includeTurns:false});if(!samePath(r.thread.cwd,project.path))throw Error('会话目录不属于当前项目');await this.codex.request('thread/resume',{threadId:s.threadId,excludeTurns:true,cwd:project.path,approvalPolicy:'on-request',sandbox:'workspace-write',...modelConfig});}
+      s.effectiveModel=settings.model;s.effectiveEffort=settings.effort||null;this.store.save();
       this.byThread.set(s.threadId,a);
       if(a.cancelled){await this.finish(a,'interrupted');return;}
       a.timer=setInterval(()=>this.flush(a).catch(err=>this.log('stream',err)),1000);
-      const r=await this.codex.request('turn/start',{threadId:s.threadId,input:[{type:'text',text:e.text,text_elements:[]}],...(s.model?{model:s.model}:{}),...(s.effort?{effort:s.effort}:{})});a.turnId=r.turn.id;
+      const r=await this.codex.request('turn/start',{threadId:s.threadId,input:[{type:'text',text:e.text,text_elements:[]}],...settings});a.turnId=r.turn.id;
       if(a.cancelled&&!a.finished)await this.codex.request('turn/interrupt',{threadId:s.threadId,turnId:a.turnId});
     }catch(err){await this.finish(a,'failed',err.message);}
   }
