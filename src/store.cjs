@@ -3,6 +3,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const {getDataDir} = require('./platform.cjs');
 const {secretTransform} = require('./credentials.cjs');
+const {projectPathKey} = require('./projects.cjs');
 
 const dataDir = getDataDir();
 function atomic(file, value) {
@@ -37,8 +38,35 @@ class Store {
   addProject(name,p){
     if(typeof p!=='string'||!path.isAbsolute(p))throw Error('请输入项目的绝对路径');
     const real=canonical(p);if(!fs.statSync(real).isDirectory())throw Error('项目路径不是文件夹');
-    const old=this.state.projects.find(x=>samePath(x.path,real));if(old)return old;
+    const old=this.state.projects.find(x=>projectPathKey(x.path)===projectPathKey(real));if(old)return old;
     const project={id:crypto.randomUUID().slice(0,8),name:String(name||path.basename(real)).slice(0,100),path:real};this.state.projects.push(project);this.save();return project;
+  }
+  resolveProjectSelection(projectIds,catalog){
+    if(!Array.isArray(projectIds)||projectIds.length>1000||projectIds.some(id=>typeof id!=='string'))throw Error('项目选择无效');
+    const entries=new Map(catalog.map(project=>[project.id,project]));
+    return [...new Set(projectIds)].map(id=>{
+      const entry=entries.get(id);if(!entry)throw Error('项目列表已变化，请刷新后重新选择');
+      if(!entry.projectId&&!entry.available)throw Error(`项目目录当前不可用：${entry.name}`);
+      return entry;
+    });
+  }
+  saveProjectScope(botId,projectIds,catalog){
+    const bot=this.bot(botId),selected=this.resolveProjectSelection(projectIds,catalog);
+    const projects=this.state.projects.slice(),allowedProjects=[];
+    for(const entry of selected){
+      let project=projects.find(existing=>projectPathKey(existing.path)===projectPathKey(entry.path));
+      if(!project){
+        const real=canonical(entry.path);if(!fs.statSync(real).isDirectory())throw Error('项目路径不是文件夹');
+        project={id:crypto.randomUUID().slice(0,8),name:entry.name,path:real};projects.push(project);
+      }
+      allowedProjects.push(project.id);
+    }
+    const updated={...bot,allowedProjects};
+    const sessions=Object.fromEntries(Object.entries(this.state.sessions).map(([key,session])=>[key,session.botId===botId&&session.projectId&&!allowedProjects.includes(session.projectId)?{...session,projectId:null,threadId:null,effectiveModel:null,effectiveEffort:null}:session]));
+    const previousProjectIds=this.state.projects.map(project=>project.id),imported=projects.length>this.state.projects.length;
+    const bots=this.state.bots.map(existing=>existing.id===botId?updated:imported&&existing.allowedProjects.includes('*')?{...existing,allowedProjects:previousProjectIds}:existing);
+    const next={...this.state,projects,sessions,bots};
+    atomic(this.file,next);this.state=next;return this.publicBot(updated);
   }
   projects(bot){return this.state.projects.filter(p=>bot.allowedProjects.includes('*')||bot.allowedProjects.includes(p.id));}
   project(bot,id){const p=this.projects(bot).find(x=>x.id===id);if(!p)throw Error('此机器人无权访问该项目');canonical(p.path);return p;}

@@ -8,6 +8,7 @@ const {CodexClient}=require('./codex.cjs');
 const {Bridge}=require('./bridge.cjs');
 const {browserCommand}=require('./platform.cjs');
 const {version}=require('../package.json');
+const {listProjectCatalog}=require('./projects.cjs');
 const PORT=Number(process.env.CODEX_FEISHU_PORT||23947);
 const runtimePath=path.join(dataDir,'runtime.json');
 const root=path.resolve(__dirname,'..');
@@ -46,6 +47,14 @@ async function serve(){
     if(action==='reconnect'){await bridge.refresh(args.id);return {ok:true};}
     if(action==='group_remove'){const b=store.bot(args.id);if(typeof args.chatId!=='string')throw Error('群聊 ID 无效');await bridge.cancelChat(args.id,args.chatId);b.groups=b.groups.filter(x=>x!==args.chatId);store.save();return {ok:true};}
     if(action==='add_project')return store.addProject(args.name,args.path);
+    if(action==='list_projects')return listProjectCatalog(codex,store.state.projects);
+    if(action==='save_project_scope'){
+      store.bot(args.id);
+      const catalog=await listProjectCatalog(codex,store.state.projects);
+      store.resolveProjectSelection(args.projectIds,catalog.projects);
+      await bridge.cancelChat(args.id);
+      return store.saveProjectScope(args.id,args.projectIds,catalog.projects);
+    }
     if(action==='begin_registration')return bridge.registration.begin(args.id);
     if(action==='poll_registration')return bridge.registration.poll(args.id);
     if(action==='bind_code')return bridge.bindCode(args.id);

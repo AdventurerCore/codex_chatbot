@@ -9,7 +9,7 @@ description: 管理本机 Codex 飞书/Lark 机器人，扫码关联、配置项
 
 macOS 可以双击仓库中的 `安装到Codex.command` 安装，`启动机器人管理.command` 打开管理页，`停止机器人服务.command` 停止服务。macOS 默认数据目录为 `~/Library/Application Support/CodexFeishuBridge`；已有旧版数据时继续使用原目录。钥匙串被锁定或拒绝访问时，让用户解锁并重试，不要改成明文保存，不要重置或覆盖已有加密密钥。
 
-项目必须在管理界面添加后才能被机器人使用。`allowedProjects: ["*"]` 表示所有已配置的项目，不代表整个磁盘。添加项目时使用用户指定或 Codex 项目列表中的真实绝对路径。
+在「项目访问范围」点击「选择项目…」，可读取 Codex 已有的本地项目并选择一个或多个。使用 `feishu_manage` 的 `list_projects` 读取候选列表，`save_project_scope` 用机器人 `id` 和候选条目的 `projectIds` 保存选择；候选 id 与已添加项目的内部 id 不同。读取候选列表不会自动增加访问范围，仅保存用户选择的项目。其他文件夹可在管理界面手动添加。`allowedProjects: ["*"]` 表示所有已添加的项目，不代表整个磁盘或所有候选项目。添加项目时使用用户指定或 Codex 项目列表中的真实绝对路径。
 
 机器人默认只接受已绑定用户的消息；群聊由绑定用户 @机器人 `/enable` 启用。首次选择项目使用 `/workspace`。支持 `/new`、`/task`、`/resume`、`/model`、`/thoughtlevel`、`/stop`、`/status`、`/approve`、`/deny`、`/answer`。命令和文件审批必须由绑定用户作出，不能自动允许。
 

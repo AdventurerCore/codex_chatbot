@@ -2,6 +2,7 @@
 <html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>飞书机器人 · Codex</title>
 <style>
 :root{color-scheme:dark;font-family:Inter,"Segoe UI","Microsoft YaHei",sans-serif;font-size:14px;background:#282828;color:#d9d9d9;--border:#424242;--muted:#969696;--card:#292929;--green:#58c77d}*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button{color:inherit;cursor:pointer;border:1px solid var(--border);border-radius:9px;background:transparent;padding:7px 12px}button:hover{background:#3b3b3b}button:disabled{cursor:wait;opacity:.45}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #7b9bff;outline-offset:2px}input,select{background:#272727;color:#ddd;border:1px solid var(--border);border-radius:8px;padding:8px 11px;min-width:0}input[type=checkbox]{accent-color:#5c83ff}h1,h2,h3,p{margin:0;font-size:inherit;font-weight:400}small{font-size:12px}a{color:#adc3ff}svg{flex-shrink:0}.app{height:100dvh;min-height:560px;display:flex;flex-direction:column;padding:8px}.topbar{height:40px;display:flex;align-items:center;gap:12px;padding:0 2px 9px}.topbar .intro{color:var(--muted);flex:1}.iconbutton{border:0;padding:5px 8px;color:var(--muted)}.layout{display:grid;grid-template-columns:256px minmax(0,1fr);gap:13px;min-height:0;flex:1}.sidebar{display:flex;flex-direction:column;gap:10px}.add{height:32px;width:100%;text-align:left;padding:4px 12px}.botlist{display:flex;flex-direction:column;gap:5px;overflow:auto}.botitem{display:flex;gap:12px;align-items:center;text-align:left;border:0;padding:13px 15px;min-height:73px;border-radius:12px}.botitem.active{background:#404040}.botitem .label{flex:1;min-width:0}.name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sub{color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:7px}.tag{font-size:10px;border:1px solid #515151;border-radius:20px;padding:1px 7px;line-height:16px}.dot{height:8px;width:8px;background:#777;display:inline-block;border-radius:50%;flex-shrink:0}.dot.connected{background:var(--green)}.dot.connecting,.dot.reconnecting{background:#f4a05a}.dot.error{background:#fc6666}.sidebarfooter{margin-top:auto;color:var(--muted);font-size:12px;padding:10px}.content{border-radius:13px;background:#151515;overflow:auto;padding:17px 16px 23px;min-width:0}.botheader{display:flex;align-items:center;gap:18px;padding:2px 13px 23px;min-height:77px}.botheader .identity{flex:1;min-width:0}.botheader .name{font-size:16px;font-weight:500}.botheader .state{display:flex;align-items:center;gap:8px;color:var(--muted);margin-top:9px}.switch{border:0;border-radius:30px;width:33px;height:19px;padding:0;background:#666;position:relative}.switch:after{content:"";position:absolute;left:2px;top:2px;width:15px;height:15px;border-radius:50%;background:#151515;border:1px solid #eee}.switch.on{background:white}.switch.on:after{left:16px}.card{background:var(--card);border:1px solid var(--border);border-radius:13px;margin-bottom:16px;overflow:hidden}.card:last-child{margin-bottom:0}.row{display:flex;align-items:center;gap:18px;padding:15px 16px}.row+.row{border-top:1px solid var(--border)}.row .copy{flex:1;min-width:0}.row p{line-height:24px;color:var(--muted);margin-top:6px}.row h3{line-height:20px;font-weight:500}.row select{width:192px;flex-shrink:0;padding:6px 12px}.inline{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.sectiontitle{padding:14px 16px;border-bottom:1px solid var(--border)}.emptygroup{color:var(--muted);padding:15px 16px;line-height:24px}.red{background:#fb5c5f;color:white;border:0}.red:hover{background:#e14e51}.muted{color:var(--muted)}.statuslabel{color:var(--muted);white-space:nowrap}.empty{padding:70px 20px;text-align:center;line-height:2;color:var(--muted)}.alert{margin:0 0 15px;padding:10px 14px;border:1px solid #755940;background:#34291e;border-radius:9px;color:#f4c18b;line-height:1.7}.group{display:flex;align-items:center;gap:10px;padding:12px 16px}.group code{flex:1;overflow:hidden;text-overflow:ellipsis}.help{font-size:12px;color:var(--muted);line-height:1.8}.overlay{position:fixed;inset:0;background:#0009;display:flex;align-items:center;justify-content:center;padding:24px;z-index:10}.modal{width:470px;max-width:100%;max-height:90dvh;overflow:auto;border:1px solid #4c4c4c;border-radius:15px;background:#282828;box-shadow:0 20px 80px #0006}.modal.wide{width:740px}.modalhead{display:flex;align-items:center;padding:16px 19px;border-bottom:1px solid var(--border);gap:12px}.modalhead h2{font-size:16px;flex:1}.modalbody{padding:20px}.modalfoot{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:9px;justify-content:flex-end}.field{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}.primary{background:#e4e4e4;color:#181818;border-color:#eee}.primary:hover{background:white}.qr{text-align:center;margin:12px auto 20px;min-height:270px;display:grid;place-content:center}.qr img{width:256px;height:256px;border-radius:8px}.qr p{line-height:1.8;margin-top:12px}.divider{height:1px;background:var(--border);margin:18px 0}.checks{display:flex;flex-direction:column;gap:13px;padding:5px 0}.checks label{display:flex;gap:10px;align-items:center}.projectrow{border-bottom:1px solid #424242;padding:10px 0}.projectrow small{display:block;color:#929292;word-break:break-all;margin-top:4px}.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#444;border:1px solid #666;border-radius:10px;box-shadow:0 8px 30px #0008;padding:11px 18px;z-index:30;max-width:90vw}.error-text{color:#ff9999;line-height:1.7}.connection{border:1px dashed #555;border-radius:10px;padding:16px;margin-top:15px}.loader{width:22px;height:22px;border:2px solid #555;border-top-color:#ddd;border-radius:50%;animation:spin 1s linear infinite;margin:20px auto}@keyframes spin{to{transform:rotate(360deg)}}
+.projectoption{display:flex;align-items:flex-start;gap:12px;cursor:pointer}.projectoption input{margin-top:4px;flex-shrink:0}.projectoption>span{min-width:0;flex:1}.projectoption[hidden]{display:none}
 @media(min-width:1150px){.app{max-width:1150px;margin:auto}.layout{grid-template-columns:270px minmax(0,1fr)}}
 @media(max-width:680px){.app{min-height:100dvh;height:auto}.topbar .intro{font-size:11px;line-height:1.5}.layout{grid-template-columns:1fr;gap:10px}.sidebar{gap:8px}.botlist{flex-direction:row;max-width:100%;overflow-x:auto}.botitem{min-width:180px;min-height:62px;padding:9px 12px}.sidebarfooter{display:none}.content{padding:14px 10px}.row{align-items:flex-start;flex-wrap:wrap;gap:12px}.row select{width:100%}.row .copy{flex-basis:100%}.botheader{padding:2px 5px 20px;gap:13px}.overlay{padding:12px}.modalbody{padding:16px}.topbar{height:49px}.modalhead h2{font-size:15px}}
 </style></head><body><div id="app" class="app"><div class="empty"><div class="loader"></div>正在连接本机机器人服务…</div></div><div id="dialogs"></div><div id="notifications" role="status" aria-live="polite"></div><script>(() => {
@@ -29273,7 +29274,7 @@ container holding the app. Specify either width or maxWidth, and either height o
   };
 
   // package.json
-  var version2 = "0.1.3";
+  var version2 = "0.1.4";
 
   // src/ui/app.js
   var appRoot = document.querySelector("#app");
@@ -29288,6 +29289,8 @@ container holding the app. Specify either width or maxWidth, and either height o
   var qrTimer = null;
   var modalType = null;
   var refreshTimer = null;
+  var scopeDraft = null;
+  var scopeRequest = 0;
   var auth2 = "";
   try {
     auth2 = location.hash.slice(1) || sessionStorage.getItem("codex-feishu-token") || "";
@@ -29330,16 +29333,20 @@ container holding the app. Specify either width or maxWidth, and either height o
     return `<div class="botheader">${logo(40)}<div class="identity"><button class="iconbutton name" style="color:inherit;padding:0" title="\u4FEE\u6539\u540D\u79F0" data-action="rename">${esc2(b2.name)}</button><div class="state"><i class="dot ${esc2(b2.runtime.status)}"></i>${esc2(status.replace("\u98DE\u4E66", b2.provider === "lark" ? "Lark" : "\u98DE\u4E66"))}</div></div><button class="switch ${b2.enabled ? "on" : ""}" role="switch" aria-checked="${b2.enabled}" aria-label="\u542F\u7528\u673A\u5668\u4EBA" data-action="toggle"></button></div>
   ${b2.runtime.error ? `<div class="alert">${esc2(b2.runtime.error)} <button data-action="reconnect">\u91CD\u65B0\u8FDE\u63A5</button></div>` : ""}
   <section class="card"><div class="row"><div class="copy"><h3>\u5173\u8054\u673A\u5668\u4EBA</h3><p>\u626B\u7801\u83B7\u53D6\u5E94\u7528\u51ED\u636E\u3002</p></div>${b2.ownerId ? `<span class="inline"><span class="statuslabel"><i class="dot connected"></i> \u5DF2\u8FDE\u901A</span><button data-action="unlink">\u26D3 \u89E3\u7ED1</button></span>` : `<button data-action="register">\u626B\u7801\u5173\u8054</button>`}</div></section>
-  <section class="card"><div class="row"><div class="copy"><h3>\u673A\u5668\u4EBA\u56DE\u590D\u9897\u7C92\u5EA6</h3><p>\u98DE\u4E66/Lark \u4EC5\u652F\u6301\u57FA\u4E8E Card JSON 2.0 \u7684\u6D41\u5F0F\u5361\u7247\uFF0C\u5DE5\u5177\u8C03\u7528\u53EA\u663E\u793A\u6298\u53E0\u6458\u8981\u3002</p></div><select aria-label="\u673A\u5668\u4EBA\u56DE\u590D\u9897\u7C92\u5EA6"><option>\u6D41\u5F0F\u5361\u7247</option></select></div><div class="row"><div class="copy"><h3>\u9879\u76EE\u8BBF\u95EE\u8303\u56F4</h3><p>${b2.allowedProjects.includes("*") ? "\u8FD9\u4E2A\u673A\u5668\u4EBA\u53EF\u4EE5\u4F7F\u7528\u6240\u6709\u5DF2\u914D\u7F6E\u7684\u9879\u76EE\u3002" : `\u8FD9\u4E2A\u673A\u5668\u4EBA\u53EF\u4EE5\u4F7F\u7528 ${b2.allowedProjects.length} \u4E2A\u6307\u5B9A\u9879\u76EE\u3002`}</p></div><select id="scope" aria-label="\u9879\u76EE\u8BBF\u95EE\u8303\u56F4"><option value="all" ${b2.allowedProjects.includes("*") ? "selected" : ""}>\u6240\u6709\u9879\u76EE</option><option value="selected" ${!b2.allowedProjects.includes("*") ? "selected" : ""}>\u6307\u5B9A\u9879\u76EE\u2026</option></select></div></section>
+  <section class="card"><div class="row"><div class="copy"><h3>\u673A\u5668\u4EBA\u56DE\u590D\u9897\u7C92\u5EA6</h3><p>\u98DE\u4E66/Lark \u4EC5\u652F\u6301\u57FA\u4E8E Card JSON 2.0 \u7684\u6D41\u5F0F\u5361\u7247\uFF0C\u5DE5\u5177\u8C03\u7528\u53EA\u663E\u793A\u6298\u53E0\u6458\u8981\u3002</p></div><select aria-label="\u673A\u5668\u4EBA\u56DE\u590D\u9897\u7C92\u5EA6"><option>\u6D41\u5F0F\u5361\u7247</option></select></div><div class="row"><div class="copy"><h3>\u9879\u76EE\u8BBF\u95EE\u8303\u56F4</h3><p>${b2.allowedProjects.includes("*") ? `\u5F53\u524D\u53EF\u8BBF\u95EE\u6240\u6709\u5DF2\u6DFB\u52A0\u9879\u76EE\uFF0C\u5171 ${state.projects.length} \u4E2A\u3002` : `\u8FD9\u4E2A\u673A\u5668\u4EBA\u53EF\u4EE5\u4F7F\u7528 ${b2.allowedProjects.length} \u4E2A\u6307\u5B9A\u9879\u76EE\u3002`}</p></div><div class="inline"><select id="scope" aria-label="\u9879\u76EE\u8BBF\u95EE\u8303\u56F4"><option value="all" ${b2.allowedProjects.includes("*") ? "selected" : ""}>\u6240\u6709\u5DF2\u6DFB\u52A0\u9879\u76EE</option><option value="selected" ${!b2.allowedProjects.includes("*") ? "selected" : ""}>\u6307\u5B9A\u9879\u76EE</option></select><button data-action="scope">\u9009\u62E9\u9879\u76EE\u2026</button></div></div></section>
   <section class="card"><div class="sectiontitle">\u5DF2\u7ED1\u5B9A\u7FA4\u804A</div>${b2.groups.length ? b2.groups.map((g) => `<div class="group"><code>${esc2(g)}</code><button data-action="group_remove" data-group="${esc2(g)}">\u89E3\u9664</button></div>`).join("") : '<div class="emptygroup">\u6682\u65E0\u7ED1\u5B9A\u7FA4\u804A\u3002\u5728\u7FA4\u4E2D @\u673A\u5668\u4EBA \u53D1\u9001 /enable \u540E\uFF0C\u8FD9\u91CC\u4F1A\u663E\u793A\u3002</div>'}</section>
   <section class="card"><div class="row"><div class="copy"><h3>\u5220\u9664\u673A\u5668\u4EBA</h3><p>\u79FB\u9664\u8FD9\u4E2A\u673A\u5668\u4EBA\u3002</p></div><button class="red" data-action="delete">\u25A4 \u5220\u9664\u673A\u5668\u4EBA</button></div></section>
   <div class="inline" style="margin-top:15px;justify-content:space-between"><button class="iconbutton" data-action="manual">\u624B\u52A8\u914D\u7F6E</button><button class="iconbutton" data-action="diagnose">\u8FDE\u63A5\u8BCA\u65AD</button><button class="iconbutton" data-action="help">\u4F7F\u7528\u8BF4\u660E</button></div>`;
   }
   function closeModal() {
+    const wasScope = modalType === "scope";
     clearTimeout(qrTimer);
     qrTimer = null;
     modalType = null;
+    scopeDraft = null;
+    scopeRequest++;
     dialogs.innerHTML = "";
+    if (wasScope) render();
   }
   function modal(title, body, footer = "", wide = false) {
     dialogs.innerHTML = `<div class="overlay"><section class="modal ${wide ? "wide" : ""}" role="dialog" aria-modal="true" aria-label="${esc2(title)}"><div class="modalhead">${robot}<h2>${esc2(title)}</h2><button class="iconbutton" data-close aria-label="\u5173\u95ED">\xD7</button></div><div class="modalbody">${body}</div>${footer ? `<div class="modalfoot">${footer}</div>` : ""}</section></div>`;
@@ -29348,10 +29355,35 @@ container holding the app. Specify either width or maxWidth, and either height o
     modalType = "projects";
     modal("\u9879\u76EE\u914D\u7F6E", `<div class="help">\u673A\u5668\u4EBA\u53EA\u80FD\u8BBF\u95EE\u8FD9\u91CC\u914D\u7F6E\u7684\u672C\u5730\u6587\u4EF6\u5939\u3002</div><div style="max-height:230px;overflow:auto;margin:10px 0 20px">${state.projects.map((p2) => `<div class="projectrow">${esc2(p2.name)}<small>${esc2(p2.path)}</small></div>`).join("") || '<p class="muted">\u5C1A\u672A\u6DFB\u52A0\u9879\u76EE\u3002</p>'}</div><form id="project-form"><label class="field">\u9879\u76EE\u540D\u79F0<input name="name" placeholder="\u6211\u7684\u9879\u76EE"></label><label class="field">\u672C\u5730\u6587\u4EF6\u5939<input name="path" required placeholder="\u672C\u673A\u9879\u76EE\u6587\u4EF6\u5939\u7684\u5B8C\u6574\u8DEF\u5F84"></label><button class="primary">\u6DFB\u52A0\u9879\u76EE</button></form>`, "", true);
   }
-  function showScope() {
+  function scopeCount() {
+    const count = document.querySelector("#scope-count");
+    if (count) count.textContent = `\u5DF2\u9009 ${scopeDraft?.selectedIds.size || 0} \u4E2A\u9879\u76EE`;
+  }
+  function filterScope() {
+    const term = (scopeDraft?.search || "").trim().toLocaleLowerCase();
+    for (const row of dialogs.querySelectorAll("[data-scope-project]")) row.hidden = !row.textContent.toLocaleLowerCase().includes(term);
+  }
+  function renderScope() {
+    const draft = scopeDraft;
+    modal("\u9879\u76EE\u8BBF\u95EE\u8303\u56F4", `<p class="help">\u4ECE Codex \u5DF2\u6709\u7684\u672C\u5730\u9879\u76EE\u4E2D\u9009\u62E9\u4E00\u4E2A\u6216\u591A\u4E2A\uFF0C\u4FDD\u5B58\u540E\u751F\u6548\u3002</p>${draft.warning ? `<div class="alert" style="margin-top:12px">${esc2(draft.warning)}</div>` : ""}<input id="scope-search" aria-label="\u641C\u7D22\u9879\u76EE" placeholder="\u641C\u7D22\u9879\u76EE\u540D\u79F0\u6216\u8DEF\u5F84" value="${esc2(draft.search)}" style="width:100%;margin:14px 0 10px"><div class="inline" style="margin-bottom:8px"><span class="help" style="margin-right:auto">\u5171 ${draft.projects.length} \u4E2A\u672C\u5730\u9879\u76EE</span><button data-action="scope_all">\u5168\u9009\u5F53\u524D\u7ED3\u679C</button><button data-action="scope_clear">\u6E05\u7A7A\u9009\u62E9</button><button data-action="scope_refresh">\u5237\u65B0</button></div><div style="max-height:330px;overflow:auto">${draft.projects.map((p2) => `<label class="projectrow projectoption" data-scope-project><input type="checkbox" name="scope_project" value="${esc2(p2.id)}" ${draft.selectedIds.has(p2.id) ? "checked" : ""} ${!p2.available && !p2.projectId ? "disabled" : ""}><span>${esc2(p2.name)} <small>${esc2(p2.path)}</small>${!p2.available ? "<small>\u76EE\u5F55\u5F53\u524D\u4E0D\u53EF\u7528\uFF0C\u8BF7\u786E\u8BA4\u5DF2\u6302\u8F7D\u6216\u6587\u4EF6\u5939\u4ECD\u5B58\u5728\u3002</small>" : ""}</span><span class="tag" style="flex:0 0 auto">${p2.fromCodex ? "Codex" : "\u5DF2\u6DFB\u52A0"}</span></label>`).join("") || '<p class="muted">\u5C1A\u65E0\u672C\u5730\u9879\u76EE\uFF0C\u53EF\u5728\u300C\u9879\u76EE\u914D\u7F6E\u300D\u4E2D\u624B\u52A8\u6DFB\u52A0\u6587\u4EF6\u5939\u3002</p>'}</div>`, `<span id="scope-count" class="help" style="margin-right:auto"></span><button data-close>\u53D6\u6D88</button><button class="primary" data-action="save_scope">\u4FDD\u5B58</button>`, true);
+    scopeCount();
+    filterScope();
+  }
+  async function showScope(preserve = false) {
+    const b2 = bot(), id = b2.id, previous = preserve && scopeDraft?.botId === id ? scopeDraft : null, request = ++scopeRequest;
+    scopeDraft = { botId: id, selectedIds: previous ? new Set(previous.selectedIds) : /* @__PURE__ */ new Set(), search: previous?.search || "", projects: [], warning: null };
     modalType = "scope";
-    const b2 = bot();
-    modal("\u9879\u76EE\u8BBF\u95EE\u8303\u56F4", `<div class="checks">${state.projects.map((p2) => `<label><input type="checkbox" name="project" value="${esc2(p2.id)}" ${b2.allowedProjects.includes(p2.id) || b2.allowedProjects.includes("*") ? "checked" : ""}>${esc2(p2.name)}</label>`).join("") || '<p class="muted">\u5148\u5728\u9879\u76EE\u914D\u7F6E\u4E2D\u6DFB\u52A0\u6587\u4EF6\u5939\u3002</p>'}</div>`, `<button data-close>\u53D6\u6D88</button><button class="primary" data-action="save_scope">\u4FDD\u5B58</button>`);
+    modal("\u9879\u76EE\u8BBF\u95EE\u8303\u56F4", '<div class="loader"></div><p class="help">\u6B63\u5728\u8BFB\u53D6 Codex \u9879\u76EE\u5217\u8868\u2026</p>', "", true);
+    try {
+      const catalog = await call("list_projects");
+      if (modalType !== "scope" || selected !== id || request !== scopeRequest) return;
+      scopeDraft.projects = catalog.projects;
+      scopeDraft.warning = catalog.warning;
+      scopeDraft.selectedIds = new Set(catalog.projects.filter((p2) => previous ? previous.selectedIds.has(p2.id) && (p2.available || p2.projectId) : p2.projectId && (b2.allowedProjects.includes("*") || b2.allowedProjects.includes(p2.projectId))).map((p2) => p2.id));
+      renderScope();
+    } catch (error62) {
+      if (modalType === "scope" && request === scopeRequest) modal("\u9879\u76EE\u8BBF\u95EE\u8303\u56F4", `<p class="error-text">${esc2(error62.message)}</p>`, `<button data-close>\u53D6\u6D88</button><button data-action="scope_refresh">\u91CD\u8BD5</button>`, true);
+    }
   }
   async function register2() {
     modalType = "qr";
@@ -29412,6 +29444,31 @@ container holding the app. Specify either width or maxWidth, and either height o
       manual();
       return;
     }
+    if (name === "scope") {
+      await showScope();
+      return;
+    }
+    if (name === "scope_refresh") {
+      await showScope(true);
+      return;
+    }
+    if (name === "scope_all") {
+      for (const row of dialogs.querySelectorAll("[data-scope-project]")) {
+        const input2 = row.querySelector("input");
+        if (!row.hidden && !input2.disabled) {
+          input2.checked = true;
+          scopeDraft.selectedIds.add(input2.value);
+        }
+      }
+      scopeCount();
+      return;
+    }
+    if (name === "scope_clear") {
+      scopeDraft.selectedIds.clear();
+      for (const input2 of dialogs.querySelectorAll("[name=scope_project]")) input2.checked = false;
+      scopeCount();
+      return;
+    }
     if (name === "rename") {
       modalType = "rename";
       modal("\u673A\u5668\u4EBA\u540D\u79F0", `<form id="rename-form"><label class="field">\u540D\u79F0<input name="name" value="${esc2(b2.name)}" required maxlength="100"></label><button class="primary">\u4FDD\u5B58</button></form>`);
@@ -29436,8 +29493,10 @@ container holding the app. Specify either width or maxWidth, and either height o
     if (name === "reconnect") await call("reconnect", { id: b2.id });
     if (name === "group_remove") await call("group_remove", { id: b2.id, chatId: el.dataset.group });
     if (name === "save_scope") {
-      await call("save_bot", { id: b2.id, allowedProjects: [...dialogs.querySelectorAll("[name=project]:checked")].map((x2) => x2.value) });
+      if (scopeDraft?.botId !== b2.id) throw Error("\u8BF7\u91CD\u65B0\u6253\u5F00\u9879\u76EE\u9009\u62E9");
+      await call("save_project_scope", { id: b2.id, projectIds: [...scopeDraft.selectedIds] });
       closeModal();
+      toast("\u9879\u76EE\u8BBF\u95EE\u8303\u56F4\u5DF2\u4FDD\u5B58");
     }
     if (name === "bind_code") {
       const r = await call("bind_code", { id: b2.id });
@@ -29453,7 +29512,7 @@ container holding the app. Specify either width or maxWidth, and either height o
       return;
     }
     if (name === "help") {
-      modal("\u4F7F\u7528\u8BF4\u660E", `<p class="help">1. \u626B\u7801\u5173\u8054\u673A\u5668\u4EBA\u3002<br>2. \u5728\u300C\u9879\u76EE\u914D\u7F6E\u300D\u6DFB\u52A0\u672C\u673A\u9879\u76EE\u3002<br>3. \u79C1\u804A\u673A\u5668\u4EBA\u53D1\u9001 /workspace \u9009\u62E9\u9879\u76EE\u3002<br>4. \u53D1\u9001\u9700\u6C42\uFF0CCodex \u5728\u672C\u673A\u6267\u884C\u5E76\u8FD4\u56DE\u6D41\u5F0F\u5361\u7247\u3002<br><br>/new \u65B0\u5BF9\u8BDD \xB7 /task \u67E5\u770B\u4F1A\u8BDD \xB7 /resume \u4F1A\u8BDDID \u7EE7\u7EED\u5BF9\u8BDD<br>/stop \u505C\u6B62\u4EFB\u52A1 \xB7 /model \u5207\u6362\u6A21\u578B \xB7 /status \u67E5\u770B\u72B6\u6001<br><br>\u7FA4\u804A\u4E2D @\u673A\u5668\u4EBA /enable \u7ED1\u5B9A\uFF0C\u53EA\u63A5\u53D7\u5DF2\u5173\u8054\u7528\u6237\u7684\u64CD\u4F5C\u3002\u547D\u4EE4\u548C\u6587\u4EF6\u5BA1\u6279\u901A\u8FC7\u98DE\u4E66\u5361\u7247\u786E\u8BA4\u3002<br><br>\u672C\u673A\u670D\u52A1\u9700\u4FDD\u6301\u8FD0\u884C\u3002\u6B64\u7248\u672C\u652F\u6301\u6587\u5B57\u4E0E\u5BCC\u6587\u672C\u8F93\u5165\uFF1B\u56FE\u7247\u3001\u8BED\u97F3\u548C\u6587\u4EF6\u4F20\u8F93\u672A\u542F\u7528\u3002</p>`);
+      modal("\u4F7F\u7528\u8BF4\u660E", `<p class="help">1. \u626B\u7801\u5173\u8054\u673A\u5668\u4EBA\u3002<br>2. \u5728\u300C\u9879\u76EE\u8BBF\u95EE\u8303\u56F4\u300D\u9009\u62E9\u4E00\u4E2A\u6216\u591A\u4E2A Codex \u672C\u5730\u9879\u76EE\uFF1B\u5176\u4ED6\u6587\u4EF6\u5939\u53EF\u5728\u300C\u9879\u76EE\u914D\u7F6E\u300D\u6DFB\u52A0\u3002<br>3. \u79C1\u804A\u673A\u5668\u4EBA\u53D1\u9001 /workspace \u9009\u62E9\u9879\u76EE\u3002<br>4. \u53D1\u9001\u9700\u6C42\uFF0CCodex \u5728\u672C\u673A\u6267\u884C\u5E76\u8FD4\u56DE\u6D41\u5F0F\u5361\u7247\u3002<br><br>/new \u65B0\u5BF9\u8BDD \xB7 /task \u67E5\u770B\u4F1A\u8BDD \xB7 /resume \u4F1A\u8BDDID \u7EE7\u7EED\u5BF9\u8BDD<br>/stop \u505C\u6B62\u4EFB\u52A1 \xB7 /model \u5207\u6362\u6A21\u578B \xB7 /status \u67E5\u770B\u72B6\u6001<br><br>\u7FA4\u804A\u4E2D @\u673A\u5668\u4EBA /enable \u7ED1\u5B9A\uFF0C\u53EA\u63A5\u53D7\u5DF2\u5173\u8054\u7528\u6237\u7684\u64CD\u4F5C\u3002\u547D\u4EE4\u548C\u6587\u4EF6\u5BA1\u6279\u901A\u8FC7\u98DE\u4E66\u5361\u7247\u786E\u8BA4\u3002<br><br>\u672C\u673A\u670D\u52A1\u9700\u4FDD\u6301\u8FD0\u884C\u3002\u6B64\u7248\u672C\u652F\u6301\u6587\u5B57\u4E0E\u5BCC\u6587\u672C\u8F93\u5165\uFF1B\u56FE\u7247\u3001\u8BED\u97F3\u548C\u6587\u4EF6\u4F20\u8F93\u672A\u542F\u7528\u3002</p>`);
       return;
     }
     if (name === "open-qr") {
@@ -29487,14 +29546,25 @@ container holding the app. Specify either width or maxWidth, and either height o
     }
   });
   document.addEventListener("change", async (e) => {
+    if (e.target.name === "scope_project" && scopeDraft) {
+      e.target.checked ? scopeDraft.selectedIds.add(e.target.value) : scopeDraft.selectedIds.delete(e.target.value);
+      scopeCount();
+      return;
+    }
     if (e.target.id === "scope") {
-      if (e.target.value === "selected") showScope();
+      if (e.target.value === "selected") await showScope();
       else try {
         await call("save_bot", { id: selected, allowedProjects: ["*"] });
         await refresh();
       } catch (err) {
         toast(err.message);
       }
+    }
+  });
+  document.addEventListener("input", (e) => {
+    if (e.target.id === "scope-search" && scopeDraft) {
+      scopeDraft.search = e.target.value;
+      filterScope();
     }
   });
   document.addEventListener("submit", async (e) => {

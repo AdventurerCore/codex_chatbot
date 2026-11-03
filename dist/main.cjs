@@ -12,7 +12,7 @@ var require_package = __commonJS({
   "package.json"(exports2, module2) {
     module2.exports = {
       name: "codex-feishu-bot",
-      version: "0.1.3",
+      version: "0.1.4",
       private: true,
       license: "Apache-2.0",
       description: "Local Feishu/Lark bot channel for Codex",
@@ -158,6 +158,77 @@ var require_credentials = __commonJS({
   }
 });
 
+// src/projects.cjs
+var require_projects = __commonJS({
+  "src/projects.cjs"(exports2, module2) {
+    var fs2 = require("node:fs");
+    var path2 = require("node:path");
+    var crypto = require("node:crypto");
+    function projectPathKey(input) {
+      let real;
+      try {
+        real = fs2.realpathSync.native(input);
+      } catch {
+        real = path2.resolve(input);
+      }
+      return process.platform === "win32" ? real.toLowerCase() : real;
+    }
+    function projectEntry(input, name, projectId = null) {
+      if (typeof input !== "string" || input.includes("\0") || !path2.isAbsolute(input)) return null;
+      let real = path2.resolve(input), available = false;
+      try {
+        real = fs2.realpathSync.native(real);
+        available = fs2.statSync(real).isDirectory();
+      } catch {
+      }
+      return {
+        id: "project-" + crypto.createHash("sha256").update(projectPathKey(real)).digest("hex").slice(0, 24),
+        name: String(name || path2.basename(real)).slice(0, 100),
+        path: real,
+        projectId,
+        available,
+        fromCodex: false
+      };
+    }
+    async function listProjectCatalog(codex, configured = []) {
+      const entries = /* @__PURE__ */ new Map();
+      for (const project of configured) {
+        const entry = projectEntry(project.path, project.name, project.id);
+        if (entry) entries.set(entry.id, entry);
+      }
+      let warning = null;
+      try {
+        const native = [], cursors = /* @__PURE__ */ new Set();
+        let cursor = null;
+        do {
+          const page = await codex.request("project/list", { limit: 100, cursor });
+          if (!Array.isArray(page.data)) throw Error("Invalid project catalog");
+          native.push(...page.data);
+          cursor = page.nextCursor || null;
+          if (cursor && cursors.has(cursor)) throw Error("Repeated project cursor");
+          if (cursor) cursors.add(cursor);
+        } while (cursor);
+        for (const project of native) {
+          const roots = Array.isArray(project.roots) ? project.roots : [];
+          for (const root2 of roots) {
+            if (!root2 || typeof root2.path !== "string") continue;
+            const name = roots.length > 1 ? `${project.name || "\u9879\u76EE"} \xB7 ${path2.basename(root2.path || "")}` : project.name;
+            const entry = projectEntry(root2.path, name);
+            if (!entry) continue;
+            const existing = entries.get(entry.id);
+            if (existing) existing.fromCodex = true;
+            else entries.set(entry.id, { ...entry, fromCodex: true });
+          }
+        }
+      } catch {
+        warning = "\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6 Codex \u5DF2\u6709\u9879\u76EE\uFF0C\u8BF7\u68C0\u67E5 Codex CLI \u540E\u5237\u65B0\u3002\u4E5F\u53EF\u4EE5\u5728\u9879\u76EE\u914D\u7F6E\u4E2D\u624B\u52A8\u6DFB\u52A0\u6587\u4EF6\u5939\u3002";
+      }
+      return { projects: [...entries.values()].sort((a, b) => a.name.localeCompare(b.name, "zh-CN", { numeric: true })), warning };
+    }
+    module2.exports = { listProjectCatalog, projectPathKey };
+  }
+});
+
 // src/store.cjs
 var require_store = __commonJS({
   "src/store.cjs"(exports2, module2) {
@@ -166,6 +237,7 @@ var require_store = __commonJS({
     var crypto = require("node:crypto");
     var { getDataDir } = require_platform();
     var { secretTransform } = require_credentials();
+    var { projectPathKey } = require_projects();
     var dataDir = getDataDir();
     function atomic(file, value) {
       fs2.mkdirSync(path2.dirname(file), { recursive: true, mode: 448 });
@@ -239,12 +311,44 @@ var require_store = __commonJS({
         if (typeof p !== "string" || !path2.isAbsolute(p)) throw Error("\u8BF7\u8F93\u5165\u9879\u76EE\u7684\u7EDD\u5BF9\u8DEF\u5F84");
         const real = canonical(p);
         if (!fs2.statSync(real).isDirectory()) throw Error("\u9879\u76EE\u8DEF\u5F84\u4E0D\u662F\u6587\u4EF6\u5939");
-        const old = this.state.projects.find((x) => samePath(x.path, real));
+        const old = this.state.projects.find((x) => projectPathKey(x.path) === projectPathKey(real));
         if (old) return old;
         const project = { id: crypto.randomUUID().slice(0, 8), name: String(name || path2.basename(real)).slice(0, 100), path: real };
         this.state.projects.push(project);
         this.save();
         return project;
+      }
+      resolveProjectSelection(projectIds, catalog) {
+        if (!Array.isArray(projectIds) || projectIds.length > 1e3 || projectIds.some((id) => typeof id !== "string")) throw Error("\u9879\u76EE\u9009\u62E9\u65E0\u6548");
+        const entries = new Map(catalog.map((project) => [project.id, project]));
+        return [...new Set(projectIds)].map((id) => {
+          const entry = entries.get(id);
+          if (!entry) throw Error("\u9879\u76EE\u5217\u8868\u5DF2\u53D8\u5316\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u65B0\u9009\u62E9");
+          if (!entry.projectId && !entry.available) throw Error(`\u9879\u76EE\u76EE\u5F55\u5F53\u524D\u4E0D\u53EF\u7528\uFF1A${entry.name}`);
+          return entry;
+        });
+      }
+      saveProjectScope(botId, projectIds, catalog) {
+        const bot = this.bot(botId), selected = this.resolveProjectSelection(projectIds, catalog);
+        const projects = this.state.projects.slice(), allowedProjects = [];
+        for (const entry of selected) {
+          let project = projects.find((existing) => projectPathKey(existing.path) === projectPathKey(entry.path));
+          if (!project) {
+            const real = canonical(entry.path);
+            if (!fs2.statSync(real).isDirectory()) throw Error("\u9879\u76EE\u8DEF\u5F84\u4E0D\u662F\u6587\u4EF6\u5939");
+            project = { id: crypto.randomUUID().slice(0, 8), name: entry.name, path: real };
+            projects.push(project);
+          }
+          allowedProjects.push(project.id);
+        }
+        const updated = { ...bot, allowedProjects };
+        const sessions = Object.fromEntries(Object.entries(this.state.sessions).map(([key, session]) => [key, session.botId === botId && session.projectId && !allowedProjects.includes(session.projectId) ? { ...session, projectId: null, threadId: null, effectiveModel: null, effectiveEffort: null } : session]));
+        const previousProjectIds = this.state.projects.map((project) => project.id), imported = projects.length > this.state.projects.length;
+        const bots = this.state.bots.map((existing) => existing.id === botId ? updated : imported && existing.allowedProjects.includes("*") ? { ...existing, allowedProjects: previousProjectIds } : existing);
+        const next = { ...this.state, projects, sessions, bots };
+        atomic(this.file, next);
+        this.state = next;
+        return this.publicBot(updated);
       }
       projects(bot) {
         return this.state.projects.filter((p) => bot.allowedProjects.includes("*") || bot.allowedProjects.includes(p.id));
@@ -132185,6 +132289,7 @@ var require_service2 = __commonJS({
     var { Bridge } = require_bridge();
     var { browserCommand } = require_platform();
     var { version: version2 } = require_package();
+    var { listProjectCatalog } = require_projects();
     var PORT = Number(process.env.CODEX_FEISHU_PORT || 23947);
     var runtimePath = path2.join(dataDir, "runtime.json");
     var root2 = path2.resolve(__dirname, "..");
@@ -132288,6 +132393,14 @@ var require_service2 = __commonJS({
           return { ok: true };
         }
         if (action === "add_project") return store.addProject(args.name, args.path);
+        if (action === "list_projects") return listProjectCatalog(codex, store.state.projects);
+        if (action === "save_project_scope") {
+          store.bot(args.id);
+          const catalog = await listProjectCatalog(codex, store.state.projects);
+          store.resolveProjectSelection(args.projectIds, catalog.projects);
+          await bridge.cancelChat(args.id);
+          return store.saveProjectScope(args.id, args.projectIds, catalog.projects);
+        }
         if (action === "begin_registration") return bridge.registration.begin(args.id);
         if (action === "poll_registration") return bridge.registration.poll(args.id);
         if (action === "bind_code") return bridge.bindCode(args.id);
@@ -174564,11 +174677,11 @@ var { Server } = require_server3();
 var { StdioServerTransport } = require_stdio2();
 var { ListToolsRequestSchema, CallToolRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema } = require_types2();
 var UI = "ui://codex-feishu-bot/dashboard";
-var actions = ["status", "diagnose", "create_bot", "save_bot", "delete_bot", "unlink", "reconnect", "group_remove", "add_project", "begin_registration", "poll_registration", "bind_code"];
+var actions = ["status", "diagnose", "create_bot", "save_bot", "delete_bot", "unlink", "reconnect", "group_remove", "add_project", "list_projects", "save_project_scope", "begin_registration", "poll_registration", "bind_code"];
 var tools = [
   { name: "feishu_dashboard", title: "\u98DE\u4E66\u673A\u5668\u4EBA", description: "\u6253\u5F00\u98DE\u4E66/Lark \u673A\u5668\u4EBA\u7BA1\u7406\u754C\u9762\uFF1A\u626B\u7801\u5173\u8054\u3001\u5F00\u5173\u3001\u9879\u76EE\u8303\u56F4\u548C\u7FA4\u804A\u3002", inputSchema: { type: "object", properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }, _meta: { ui: { resourceUri: UI }, "openai/ui": { entrypoints: [{ type: "global" }] } } },
   { name: "feishu_status", title: "\u98DE\u4E66\u673A\u5668\u4EBA\u72B6\u6001", description: "\u8BFB\u53D6\u672C\u5730\u673A\u5668\u4EBA\u8FDE\u63A5\u72B6\u6001\u3001\u9879\u76EE\u548C\u8FD0\u884C\u4E2D\u7684\u4EFB\u52A1\uFF1B\u4E0D\u4F1A\u8FD4\u56DE\u51ED\u636E\u3002", inputSchema: { type: "object", properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
-  { name: "feishu_manage", title: "\u7BA1\u7406\u98DE\u4E66\u673A\u5668\u4EBA", description: "\u521B\u5EFA\u3001\u914D\u7F6E\u3001\u505C\u7528\u6216\u5220\u9664\u672C\u673A\u98DE\u4E66\u673A\u5668\u4EBA\uFF0C\u6DFB\u52A0\u5141\u8BB8\u8BBF\u95EE\u7684\u9879\u76EE\u3002\u51ED\u636E\u5728\u7BA1\u7406\u754C\u9762\u8F93\u5165\u3002", inputSchema: { type: "object", properties: { action: { type: "string", enum: ["create_bot", "save_bot", "delete_bot", "unlink", "reconnect", "group_remove", "add_project", "bind_code", "diagnose"] }, args: { type: "object", properties: { id: { type: "string" }, name: { type: "string" }, provider: { type: "string", enum: ["feishu", "lark"] }, enabled: { type: "boolean" }, allowedProjects: { type: "array", items: { type: "string" } }, path: { type: "string" }, chatId: { type: "string" } }, additionalProperties: false } }, required: ["action", "args"], additionalProperties: false }, annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true } },
+  { name: "feishu_manage", title: "\u7BA1\u7406\u98DE\u4E66\u673A\u5668\u4EBA", description: "\u521B\u5EFA\u3001\u914D\u7F6E\u3001\u505C\u7528\u6216\u5220\u9664\u672C\u673A\u98DE\u4E66\u673A\u5668\u4EBA\uFF0C\u8BFB\u53D6 Codex \u672C\u5730\u9879\u76EE\u5019\u9009\u5217\u8868\u5E76\u4FDD\u5B58\u9879\u76EE\u591A\u9009\u8303\u56F4\u3002\u51ED\u636E\u5728\u7BA1\u7406\u754C\u9762\u8F93\u5165\u3002", inputSchema: { type: "object", properties: { action: { type: "string", enum: ["create_bot", "save_bot", "delete_bot", "unlink", "reconnect", "group_remove", "add_project", "list_projects", "save_project_scope", "bind_code", "diagnose"] }, args: { type: "object", properties: { id: { type: "string" }, name: { type: "string" }, provider: { type: "string", enum: ["feishu", "lark"] }, enabled: { type: "boolean" }, allowedProjects: { type: "array", items: { type: "string" } }, projectIds: { type: "array", items: { type: "string" } }, path: { type: "string" }, chatId: { type: "string" } }, additionalProperties: false } }, required: ["action", "args"], additionalProperties: false }, annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true } },
   { name: "feishu_ui", title: "\u673A\u5668\u4EBA\u754C\u9762\u64CD\u4F5C", description: "\u7BA1\u7406\u754C\u9762\u4E13\u7528\u64CD\u4F5C\u3002", inputSchema: { type: "object", properties: { action: { type: "string", enum: actions }, args: { type: "object" } }, required: ["action", "args"], additionalProperties: false }, annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true }, _meta: { ui: { visibility: ["app"] } } }
 ];
 async function mcp() {
