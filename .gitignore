@@ -1,0 +1,13 @@
+node_modules/
+*.log
+runtime.json
+state.json
+.env
+.env.*
+!.env.example
+CodexFeishuBridge/
+*.tmp
+*.zip
+coverage/
+.DS_Store
+Thumbs.db

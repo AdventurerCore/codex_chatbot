@@ -1,0 +1,33 @@
+{
+  "name": "codex-feishu-bot",
+  "version": "0.1.1",
+  "description": "在飞书或 Lark 中访问本机 Codex 项目，支持扫码关联、长连接、流式卡片、会话与审批。",
+  "author": {
+    "name": "Local Plugins"
+  },
+  "keywords": [
+    "feishu",
+    "lark",
+    "bot",
+    "codex",
+    "local"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "飞书机器人",
+    "shortDescription": "从飞书控制本机 Codex 项目",
+    "longDescription": "本地飞书/Lark 机器人通道。扫码关联、WebSocket 收发、Card JSON 2.0 流式卡片、项目范围、群聊绑定、会话切换和审批。",
+    "developerName": "Local Plugins",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": "打开飞书机器人管理界面",
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg",
+    "brandColor": "#3769FF"
+  }
+}

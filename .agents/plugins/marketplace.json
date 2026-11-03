@@ -1,0 +1,12 @@
+{
+  "name": "local-feishu",
+  "interface": {"displayName": "本地飞书插件"},
+  "plugins": [
+    {
+      "name": "codex-feishu-bot",
+      "source": {"source": "local", "path": "."},
+      "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+      "category": "Productivity"
+    }
+  ]
+}
