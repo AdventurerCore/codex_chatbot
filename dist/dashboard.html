@@ -29274,7 +29274,7 @@ container holding the app. Specify either width or maxWidth, and either height o
   };
 
   // package.json
-  var version2 = "0.1.4";
+  var version2 = "0.1.5";
 
   // src/ui/app.js
   var appRoot = document.querySelector("#app");
@@ -29334,7 +29334,7 @@ container holding the app. Specify either width or maxWidth, and either height o
   ${b2.runtime.error ? `<div class="alert">${esc2(b2.runtime.error)} <button data-action="reconnect">\u91CD\u65B0\u8FDE\u63A5</button></div>` : ""}
   <section class="card"><div class="row"><div class="copy"><h3>\u5173\u8054\u673A\u5668\u4EBA</h3><p>\u626B\u7801\u83B7\u53D6\u5E94\u7528\u51ED\u636E\u3002</p></div>${b2.ownerId ? `<span class="inline"><span class="statuslabel"><i class="dot connected"></i> \u5DF2\u8FDE\u901A</span><button data-action="unlink">\u26D3 \u89E3\u7ED1</button></span>` : `<button data-action="register">\u626B\u7801\u5173\u8054</button>`}</div></section>
   <section class="card"><div class="row"><div class="copy"><h3>\u673A\u5668\u4EBA\u56DE\u590D\u9897\u7C92\u5EA6</h3><p>\u98DE\u4E66/Lark \u4EC5\u652F\u6301\u57FA\u4E8E Card JSON 2.0 \u7684\u6D41\u5F0F\u5361\u7247\uFF0C\u5DE5\u5177\u8C03\u7528\u53EA\u663E\u793A\u6298\u53E0\u6458\u8981\u3002</p></div><select aria-label="\u673A\u5668\u4EBA\u56DE\u590D\u9897\u7C92\u5EA6"><option>\u6D41\u5F0F\u5361\u7247</option></select></div><div class="row"><div class="copy"><h3>\u9879\u76EE\u8BBF\u95EE\u8303\u56F4</h3><p>${b2.allowedProjects.includes("*") ? `\u5F53\u524D\u53EF\u8BBF\u95EE\u6240\u6709\u5DF2\u6DFB\u52A0\u9879\u76EE\uFF0C\u5171 ${state.projects.length} \u4E2A\u3002` : `\u8FD9\u4E2A\u673A\u5668\u4EBA\u53EF\u4EE5\u4F7F\u7528 ${b2.allowedProjects.length} \u4E2A\u6307\u5B9A\u9879\u76EE\u3002`}</p></div><div class="inline"><select id="scope" aria-label="\u9879\u76EE\u8BBF\u95EE\u8303\u56F4"><option value="all" ${b2.allowedProjects.includes("*") ? "selected" : ""}>\u6240\u6709\u5DF2\u6DFB\u52A0\u9879\u76EE</option><option value="selected" ${!b2.allowedProjects.includes("*") ? "selected" : ""}>\u6307\u5B9A\u9879\u76EE</option></select><button data-action="scope">\u9009\u62E9\u9879\u76EE\u2026</button></div></div></section>
-  <section class="card"><div class="sectiontitle">\u5DF2\u7ED1\u5B9A\u7FA4\u804A</div>${b2.groups.length ? b2.groups.map((g) => `<div class="group"><code>${esc2(g)}</code><button data-action="group_remove" data-group="${esc2(g)}">\u89E3\u9664</button></div>`).join("") : '<div class="emptygroup">\u6682\u65E0\u7ED1\u5B9A\u7FA4\u804A\u3002\u5728\u7FA4\u4E2D @\u673A\u5668\u4EBA \u53D1\u9001 /enable \u540E\uFF0C\u8FD9\u91CC\u4F1A\u663E\u793A\u3002</div>'}</section>
+  <section class="card"><div class="row"><div class="copy"><h3>\u7FA4\u804A\u4F7F\u7528\u6743\u9650</h3><p>${b2.groupAccess === "all_members" ? "\u5DF2\u542F\u7528\u7FA4\u5185\u5168\u5458\u4F7F\u7528\uFF1B\u6240\u6709\u6210\u5458\u53EF\u8BA9 Codex \u8BFB\u53D6\u6216\u4FEE\u6539\u6388\u6743\u9879\u76EE\uFF0C\u7BA1\u7406\u547D\u4EE4\u4E0E\u5BA1\u6279\u4ECD\u4EC5\u9650\u7ED1\u5B9A\u7528\u6237\u3002" : "\u53EA\u6709\u7ED1\u5B9A\u7528\u6237\u53EF\u4EE5\u5728\u5DF2\u542F\u7528\u7FA4\u804A\u4E2D\u4F7F\u7528\u673A\u5668\u4EBA\u3002"}</p></div><select id="group-access" aria-label="\u7FA4\u804A\u4F7F\u7528\u6743\u9650"><option value="owner" ${b2.groupAccess !== "all_members" ? "selected" : ""}>\u4EC5\u7ED1\u5B9A\u7528\u6237</option><option value="all_members" ${b2.groupAccess === "all_members" ? "selected" : ""}>\u7FA4\u5185\u6240\u6709\u6210\u5458</option></select></div><div class="sectiontitle">\u5DF2\u7ED1\u5B9A\u7FA4\u804A</div>${b2.groups.length ? b2.groups.map((g) => `<div class="group"><code>${esc2(g)}</code><button data-action="group_remove" data-group="${esc2(g)}">\u89E3\u9664</button></div>`).join("") : '<div class="emptygroup">\u6682\u65E0\u7ED1\u5B9A\u7FA4\u804A\u3002\u5728\u7FA4\u4E2D @\u673A\u5668\u4EBA \u53D1\u9001 /enable \u540E\uFF0C\u8FD9\u91CC\u4F1A\u663E\u793A\u3002</div>'}</section>
   <section class="card"><div class="row"><div class="copy"><h3>\u5220\u9664\u673A\u5668\u4EBA</h3><p>\u79FB\u9664\u8FD9\u4E2A\u673A\u5668\u4EBA\u3002</p></div><button class="red" data-action="delete">\u25A4 \u5220\u9664\u673A\u5668\u4EBA</button></div></section>
   <div class="inline" style="margin-top:15px;justify-content:space-between"><button class="iconbutton" data-action="manual">\u624B\u52A8\u914D\u7F6E</button><button class="iconbutton" data-action="diagnose">\u8FDE\u63A5\u8BCA\u65AD</button><button class="iconbutton" data-action="help">\u4F7F\u7528\u8BF4\u660E</button></div>`;
   }
@@ -29512,7 +29512,7 @@ container holding the app. Specify either width or maxWidth, and either height o
       return;
     }
     if (name === "help") {
-      modal("\u4F7F\u7528\u8BF4\u660E", `<p class="help">1. \u626B\u7801\u5173\u8054\u673A\u5668\u4EBA\u3002<br>2. \u5728\u300C\u9879\u76EE\u8BBF\u95EE\u8303\u56F4\u300D\u9009\u62E9\u4E00\u4E2A\u6216\u591A\u4E2A Codex \u672C\u5730\u9879\u76EE\uFF1B\u5176\u4ED6\u6587\u4EF6\u5939\u53EF\u5728\u300C\u9879\u76EE\u914D\u7F6E\u300D\u6DFB\u52A0\u3002<br>3. \u79C1\u804A\u673A\u5668\u4EBA\u53D1\u9001 /workspace \u9009\u62E9\u9879\u76EE\u3002<br>4. \u53D1\u9001\u9700\u6C42\uFF0CCodex \u5728\u672C\u673A\u6267\u884C\u5E76\u8FD4\u56DE\u6D41\u5F0F\u5361\u7247\u3002<br><br>/new \u65B0\u5BF9\u8BDD \xB7 /task \u67E5\u770B\u4F1A\u8BDD \xB7 /resume \u4F1A\u8BDDID \u7EE7\u7EED\u5BF9\u8BDD<br>/stop \u505C\u6B62\u4EFB\u52A1 \xB7 /model \u5207\u6362\u6A21\u578B \xB7 /status \u67E5\u770B\u72B6\u6001<br><br>\u7FA4\u804A\u4E2D @\u673A\u5668\u4EBA /enable \u7ED1\u5B9A\uFF0C\u53EA\u63A5\u53D7\u5DF2\u5173\u8054\u7528\u6237\u7684\u64CD\u4F5C\u3002\u547D\u4EE4\u548C\u6587\u4EF6\u5BA1\u6279\u901A\u8FC7\u98DE\u4E66\u5361\u7247\u786E\u8BA4\u3002<br><br>\u672C\u673A\u670D\u52A1\u9700\u4FDD\u6301\u8FD0\u884C\u3002\u6B64\u7248\u672C\u652F\u6301\u6587\u5B57\u4E0E\u5BCC\u6587\u672C\u8F93\u5165\uFF1B\u56FE\u7247\u3001\u8BED\u97F3\u548C\u6587\u4EF6\u4F20\u8F93\u672A\u542F\u7528\u3002</p>`);
+      modal("\u4F7F\u7528\u8BF4\u660E", `<p class="help">1. \u626B\u7801\u5173\u8054\u673A\u5668\u4EBA\u3002<br>2. \u5728\u300C\u9879\u76EE\u8BBF\u95EE\u8303\u56F4\u300D\u9009\u62E9\u4E00\u4E2A\u6216\u591A\u4E2A Codex \u672C\u5730\u9879\u76EE\uFF1B\u5176\u4ED6\u6587\u4EF6\u5939\u53EF\u5728\u300C\u9879\u76EE\u914D\u7F6E\u300D\u6DFB\u52A0\u3002<br>3. \u79C1\u804A\u673A\u5668\u4EBA\u53D1\u9001 /workspace \u9009\u62E9\u9879\u76EE\u3002<br>4. \u53D1\u9001\u9700\u6C42\uFF0CCodex \u5728\u672C\u673A\u6267\u884C\u5E76\u8FD4\u56DE\u6D41\u5F0F\u5361\u7247\u3002<br><br>/new \u65B0\u5BF9\u8BDD \xB7 /task \u67E5\u770B\u4F1A\u8BDD \xB7 /resume \u4F1A\u8BDDID \u7EE7\u7EED\u5BF9\u8BDD<br>/stop \u505C\u6B62\u4EFB\u52A1 \xB7 /model \u5207\u6362\u6A21\u578B \xB7 /status \u67E5\u770B\u72B6\u6001<br><br>\u7FA4\u804A\u4E2D\u7531\u7ED1\u5B9A\u7528\u6237 @\u673A\u5668\u4EBA /enable \u542F\u7528\u3002\u53EF\u5728\u300C\u7FA4\u804A\u4F7F\u7528\u6743\u9650\u300D\u9009\u62E9\u4EC5\u7ED1\u5B9A\u7528\u6237\u6216\u7FA4\u5185\u6240\u6709\u6210\u5458\uFF1B/enable\u3001/disable\u3001/workspace\u3001/task\u3001/resume\u3001\u5BA1\u6279\u4E0E\u95EE\u9898\u56DE\u7B54\u4ECD\u4EC5\u9650\u7ED1\u5B9A\u7528\u6237\u3002<br><br>\u672C\u673A\u670D\u52A1\u9700\u4FDD\u6301\u8FD0\u884C\u3002\u6B64\u7248\u672C\u652F\u6301\u6587\u5B57\u4E0E\u5BCC\u6587\u672C\u8F93\u5165\uFF1B\u56FE\u7247\u3001\u8BED\u97F3\u548C\u6587\u4EF6\u4F20\u8F93\u672A\u542F\u7528\u3002</p>`);
       return;
     }
     if (name === "open-qr") {
@@ -29549,6 +29549,17 @@ container holding the app. Specify either width or maxWidth, and either height o
     if (e.target.name === "scope_project" && scopeDraft) {
       e.target.checked ? scopeDraft.selectedIds.add(e.target.value) : scopeDraft.selectedIds.delete(e.target.value);
       scopeCount();
+      return;
+    }
+    if (e.target.id === "group-access") {
+      try {
+        await call("save_bot", { id: selected, groupAccess: e.target.value });
+        toast("\u7FA4\u804A\u4F7F\u7528\u6743\u9650\u5DF2\u4FDD\u5B58");
+        await refresh();
+      } catch (err) {
+        toast(err.message);
+        await refresh();
+      }
       return;
     }
     if (e.target.id === "scope") {

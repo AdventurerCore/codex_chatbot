@@ -53,13 +53,15 @@ class Bridge {
       const bind=this.bindCodes.get(botId);if(!bind||Date.now()>bind.expires||arg!==bind.code)return;
       this.bindCodes.delete(botId);bot.ownerId=e.sender;this.store.save();await reply('关联成功。发送 /workspace 选择项目。');return;
     }
-    const owner=e.sender===bot.ownerId;
-    if(!owner)return;
-    if(e.type==='group'&&(!t.botOpenId||!e.mentionIds.includes(t.botOpenId)))return;
+    const owner=e.sender===bot.ownerId,group=e.type==='group';
+    if(group&&(!t.botOpenId||!e.mentionIds.includes(t.botOpenId)))return;
+    if(!owner&&!group)return;
     if(!this.store.remember(botId+':'+e.messageId))return;
-    if(cmd==='/enable'&&e.type==='group'){if(!bot.groups.includes(e.chatId))bot.groups.push(e.chatId);this.store.save();await reply('群聊已启用。当前仅绑定用户可以操作此机器人。发送 /workspace 选择项目。');return;}
-    if(cmd==='/disable'&&e.type==='group'){bot.groups=bot.groups.filter(x=>x!==e.chatId);this.store.save();await this.cancelChat(botId,e.chatId);await reply('群聊已停用。');return;}
-    if(e.type==='group'&&!bot.groups.includes(e.chatId)){await reply('此群尚未绑定，请 @机器人 /enable。');return;}
+    if(cmd==='/enable'&&group){if(!owner){await reply('仅绑定用户可以启用群聊。');return;}if(!bot.groups.includes(e.chatId))bot.groups.push(e.chatId);this.store.save();await reply(`群聊已启用。${bot.groupAccess==='all_members'?'群内所有成员均可 @机器人使用；管理命令和审批仍仅限绑定用户。':'当前仅绑定用户可以操作此机器人。'}发送 /workspace 选择项目。`);return;}
+    if(cmd==='/disable'&&group){if(!owner){await reply('仅绑定用户可以停用群聊。');return;}bot.groups=bot.groups.filter(x=>x!==e.chatId);this.store.save();await this.cancelChat(botId,e.chatId);await reply('群聊已停用。');return;}
+    if(group&&!bot.groups.includes(e.chatId)){await reply(owner?'此群尚未绑定，请 @机器人 /enable。':'此群尚未由绑定用户启用。');return;}
+    if(!owner&&bot.groupAccess!=='all_members'){await reply('此机器人当前仅允许绑定用户操作。');return;}
+    if(group&&!owner&&['/workspace','/task','/tasks','/resume','/approve','/deny','/answer'].includes(cmd)){await reply('此命令仅限绑定用户。群成员可以直接发送需求，或使用 /new、/model、/thoughtlevel、/stop、/status。');return;}
     const key=sessionKey(botId,e);let s=this.store.state.sessions[key];if(!s){s={botId,chatId:e.chatId,topic:e.topic,projectId:null,threadId:null};this.store.state.sessions[key]=s;}
     try{
       if(cmd==='/help'){await reply(HELP);return;}

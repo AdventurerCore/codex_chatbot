@@ -12,7 +12,7 @@ var require_package = __commonJS({
   "package.json"(exports2, module2) {
     module2.exports = {
       name: "codex-feishu-bot",
-      version: "0.1.4",
+      version: "0.1.5",
       private: true,
       license: "Apache-2.0",
       description: "Local Feishu/Lark bot channel for Codex",
@@ -269,11 +269,12 @@ var require_store = __commonJS({
       }
       publicBot(b) {
         const { secret, ...v } = b;
-        return { ...v, hasCredentials: !!secret };
+        return { ...v, groupAccess: v.groupAccess || "owner", hasCredentials: !!secret };
       }
       async saveBot(input) {
         const old = input.id ? this.bot(input.id) : null;
-        const b = old ? structuredClone(old) : { id: crypto.randomUUID(), name: "\u65B0\u673A\u5668\u4EBA", provider: "feishu", enabled: false, allowedProjects: ["*"], replyMode: "streaming_card", ownerId: "", groups: [] };
+        const b = old ? structuredClone(old) : { id: crypto.randomUUID(), name: "\u65B0\u673A\u5668\u4EBA", provider: "feishu", enabled: false, allowedProjects: ["*"], replyMode: "streaming_card", ownerId: "", groups: [], groupAccess: "owner" };
+        b.groupAccess ??= "owner";
         if (input.name !== void 0) {
           if (typeof input.name !== "string" || !input.name.trim() || input.name.length > 100) throw Error("\u540D\u79F0\u957F\u5EA6\u9700\u5728 1\u2013100 \u4E4B\u95F4");
           b.name = input.name.trim();
@@ -293,6 +294,10 @@ var require_store = __commonJS({
         if (input.ownerId !== void 0) {
           if (input.ownerId && !/^ou_[\w-]+$/.test(input.ownerId)) throw Error("\u7528\u6237 Open ID \u683C\u5F0F\u9519\u8BEF");
           b.ownerId = input.ownerId;
+        }
+        if (input.groupAccess !== void 0) {
+          if (!["owner", "all_members"].includes(input.groupAccess)) throw Error("\u7FA4\u804A\u4F7F\u7528\u6743\u9650\u65E0\u6548");
+          b.groupAccess = input.groupAccess;
         }
         if (input.allowedProjects !== void 0) {
           if (!Array.isArray(input.allowedProjects) || input.allowedProjects.some((x) => x !== "*" && !this.state.projects.some((p) => p.id === x))) throw Error("\u9879\u76EE\u8303\u56F4\u65E0\u6548");
@@ -131956,25 +131961,41 @@ var require_bridge = __commonJS({
           await reply("\u5173\u8054\u6210\u529F\u3002\u53D1\u9001 /workspace \u9009\u62E9\u9879\u76EE\u3002");
           return;
         }
-        const owner = e.sender === bot.ownerId;
-        if (!owner) return;
-        if (e.type === "group" && (!t.botOpenId || !e.mentionIds.includes(t.botOpenId))) return;
+        const owner = e.sender === bot.ownerId, group = e.type === "group";
+        if (group && (!t.botOpenId || !e.mentionIds.includes(t.botOpenId))) return;
+        if (!owner && !group) return;
         if (!this.store.remember(botId + ":" + e.messageId)) return;
-        if (cmd === "/enable" && e.type === "group") {
+        if (cmd === "/enable" && group) {
+          if (!owner) {
+            await reply("\u4EC5\u7ED1\u5B9A\u7528\u6237\u53EF\u4EE5\u542F\u7528\u7FA4\u804A\u3002");
+            return;
+          }
           if (!bot.groups.includes(e.chatId)) bot.groups.push(e.chatId);
           this.store.save();
-          await reply("\u7FA4\u804A\u5DF2\u542F\u7528\u3002\u5F53\u524D\u4EC5\u7ED1\u5B9A\u7528\u6237\u53EF\u4EE5\u64CD\u4F5C\u6B64\u673A\u5668\u4EBA\u3002\u53D1\u9001 /workspace \u9009\u62E9\u9879\u76EE\u3002");
+          await reply(`\u7FA4\u804A\u5DF2\u542F\u7528\u3002${bot.groupAccess === "all_members" ? "\u7FA4\u5185\u6240\u6709\u6210\u5458\u5747\u53EF @\u673A\u5668\u4EBA\u4F7F\u7528\uFF1B\u7BA1\u7406\u547D\u4EE4\u548C\u5BA1\u6279\u4ECD\u4EC5\u9650\u7ED1\u5B9A\u7528\u6237\u3002" : "\u5F53\u524D\u4EC5\u7ED1\u5B9A\u7528\u6237\u53EF\u4EE5\u64CD\u4F5C\u6B64\u673A\u5668\u4EBA\u3002"}\u53D1\u9001 /workspace \u9009\u62E9\u9879\u76EE\u3002`);
           return;
         }
-        if (cmd === "/disable" && e.type === "group") {
+        if (cmd === "/disable" && group) {
+          if (!owner) {
+            await reply("\u4EC5\u7ED1\u5B9A\u7528\u6237\u53EF\u4EE5\u505C\u7528\u7FA4\u804A\u3002");
+            return;
+          }
           bot.groups = bot.groups.filter((x) => x !== e.chatId);
           this.store.save();
           await this.cancelChat(botId, e.chatId);
           await reply("\u7FA4\u804A\u5DF2\u505C\u7528\u3002");
           return;
         }
-        if (e.type === "group" && !bot.groups.includes(e.chatId)) {
-          await reply("\u6B64\u7FA4\u5C1A\u672A\u7ED1\u5B9A\uFF0C\u8BF7 @\u673A\u5668\u4EBA /enable\u3002");
+        if (group && !bot.groups.includes(e.chatId)) {
+          await reply(owner ? "\u6B64\u7FA4\u5C1A\u672A\u7ED1\u5B9A\uFF0C\u8BF7 @\u673A\u5668\u4EBA /enable\u3002" : "\u6B64\u7FA4\u5C1A\u672A\u7531\u7ED1\u5B9A\u7528\u6237\u542F\u7528\u3002");
+          return;
+        }
+        if (!owner && bot.groupAccess !== "all_members") {
+          await reply("\u6B64\u673A\u5668\u4EBA\u5F53\u524D\u4EC5\u5141\u8BB8\u7ED1\u5B9A\u7528\u6237\u64CD\u4F5C\u3002");
+          return;
+        }
+        if (group && !owner && ["/workspace", "/task", "/tasks", "/resume", "/approve", "/deny", "/answer"].includes(cmd)) {
+          await reply("\u6B64\u547D\u4EE4\u4EC5\u9650\u7ED1\u5B9A\u7528\u6237\u3002\u7FA4\u6210\u5458\u53EF\u4EE5\u76F4\u63A5\u53D1\u9001\u9700\u6C42\uFF0C\u6216\u4F7F\u7528 /new\u3001/model\u3001/thoughtlevel\u3001/stop\u3001/status\u3002");
           return;
         }
         const key = sessionKey(botId, e);
@@ -174681,7 +174702,7 @@ var actions = ["status", "diagnose", "create_bot", "save_bot", "delete_bot", "un
 var tools = [
   { name: "feishu_dashboard", title: "\u98DE\u4E66\u673A\u5668\u4EBA", description: "\u6253\u5F00\u98DE\u4E66/Lark \u673A\u5668\u4EBA\u7BA1\u7406\u754C\u9762\uFF1A\u626B\u7801\u5173\u8054\u3001\u5F00\u5173\u3001\u9879\u76EE\u8303\u56F4\u548C\u7FA4\u804A\u3002", inputSchema: { type: "object", properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }, _meta: { ui: { resourceUri: UI }, "openai/ui": { entrypoints: [{ type: "global" }] } } },
   { name: "feishu_status", title: "\u98DE\u4E66\u673A\u5668\u4EBA\u72B6\u6001", description: "\u8BFB\u53D6\u672C\u5730\u673A\u5668\u4EBA\u8FDE\u63A5\u72B6\u6001\u3001\u9879\u76EE\u548C\u8FD0\u884C\u4E2D\u7684\u4EFB\u52A1\uFF1B\u4E0D\u4F1A\u8FD4\u56DE\u51ED\u636E\u3002", inputSchema: { type: "object", properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false } },
-  { name: "feishu_manage", title: "\u7BA1\u7406\u98DE\u4E66\u673A\u5668\u4EBA", description: "\u521B\u5EFA\u3001\u914D\u7F6E\u3001\u505C\u7528\u6216\u5220\u9664\u672C\u673A\u98DE\u4E66\u673A\u5668\u4EBA\uFF0C\u8BFB\u53D6 Codex \u672C\u5730\u9879\u76EE\u5019\u9009\u5217\u8868\u5E76\u4FDD\u5B58\u9879\u76EE\u591A\u9009\u8303\u56F4\u3002\u51ED\u636E\u5728\u7BA1\u7406\u754C\u9762\u8F93\u5165\u3002", inputSchema: { type: "object", properties: { action: { type: "string", enum: ["create_bot", "save_bot", "delete_bot", "unlink", "reconnect", "group_remove", "add_project", "list_projects", "save_project_scope", "bind_code", "diagnose"] }, args: { type: "object", properties: { id: { type: "string" }, name: { type: "string" }, provider: { type: "string", enum: ["feishu", "lark"] }, enabled: { type: "boolean" }, allowedProjects: { type: "array", items: { type: "string" } }, projectIds: { type: "array", items: { type: "string" } }, path: { type: "string" }, chatId: { type: "string" } }, additionalProperties: false } }, required: ["action", "args"], additionalProperties: false }, annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true } },
+  { name: "feishu_manage", title: "\u7BA1\u7406\u98DE\u4E66\u673A\u5668\u4EBA", description: "\u521B\u5EFA\u3001\u914D\u7F6E\u3001\u505C\u7528\u6216\u5220\u9664\u672C\u673A\u98DE\u4E66\u673A\u5668\u4EBA\uFF0C\u8BBE\u7F6E\u7FA4\u804A\u6210\u5458\u6743\u9650\uFF0C\u8BFB\u53D6 Codex \u672C\u5730\u9879\u76EE\u5019\u9009\u5217\u8868\u5E76\u4FDD\u5B58\u9879\u76EE\u591A\u9009\u8303\u56F4\u3002\u51ED\u636E\u5728\u7BA1\u7406\u754C\u9762\u8F93\u5165\u3002", inputSchema: { type: "object", properties: { action: { type: "string", enum: ["create_bot", "save_bot", "delete_bot", "unlink", "reconnect", "group_remove", "add_project", "list_projects", "save_project_scope", "bind_code", "diagnose"] }, args: { type: "object", properties: { id: { type: "string" }, name: { type: "string" }, provider: { type: "string", enum: ["feishu", "lark"] }, enabled: { type: "boolean" }, groupAccess: { type: "string", enum: ["owner", "all_members"] }, allowedProjects: { type: "array", items: { type: "string" } }, projectIds: { type: "array", items: { type: "string" } }, path: { type: "string" }, chatId: { type: "string" } }, additionalProperties: false } }, required: ["action", "args"], additionalProperties: false }, annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true } },
   { name: "feishu_ui", title: "\u673A\u5668\u4EBA\u754C\u9762\u64CD\u4F5C", description: "\u7BA1\u7406\u754C\u9762\u4E13\u7528\u64CD\u4F5C\u3002", inputSchema: { type: "object", properties: { action: { type: "string", enum: actions }, args: { type: "object" } }, required: ["action", "args"], additionalProperties: false }, annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true }, _meta: { ui: { visibility: ["app"] } } }
 ];
 async function mcp() {

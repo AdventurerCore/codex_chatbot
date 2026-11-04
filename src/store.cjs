@@ -22,15 +22,17 @@ class Store {
   }
   save(){atomic(this.file,this.state);}
   bot(id){const b=this.state.bots.find(x=>x.id===id);if(!b)throw Error('机器人不存在');return b;}
-  publicBot(b){const {secret,...v}=b;return {...v,hasCredentials:!!secret};}
+  publicBot(b){const {secret,...v}=b;return {...v,groupAccess:v.groupAccess||'owner',hasCredentials:!!secret};}
   async saveBot(input){
     const old=input.id?this.bot(input.id):null;
-    const b=old?structuredClone(old):{id:crypto.randomUUID(),name:'新机器人',provider:'feishu',enabled:false,allowedProjects:['*'],replyMode:'streaming_card',ownerId:'',groups:[]};
+    const b=old?structuredClone(old):{id:crypto.randomUUID(),name:'新机器人',provider:'feishu',enabled:false,allowedProjects:['*'],replyMode:'streaming_card',ownerId:'',groups:[],groupAccess:'owner'};
+    b.groupAccess??='owner';
     if(input.name!==undefined) { if(typeof input.name!=='string'||!input.name.trim()||input.name.length>100)throw Error('名称长度需在 1–100 之间');b.name=input.name.trim();}
     if(input.provider!==undefined){if(!['feishu','lark'].includes(input.provider))throw Error('不支持的渠道');b.provider=input.provider;}
     if(input.enabled!==undefined){if(typeof input.enabled!=='boolean')throw Error('enabled 必须是布尔值');b.enabled=input.enabled;}
     if(input.appId!==undefined){if(input.appId&&!/^cli_[a-zA-Z0-9_-]+$/.test(input.appId))throw Error('App ID 格式错误');b.appId=input.appId;}
     if(input.ownerId!==undefined){if(input.ownerId&&!/^ou_[\w-]+$/.test(input.ownerId))throw Error('用户 Open ID 格式错误');b.ownerId=input.ownerId;}
+    if(input.groupAccess!==undefined){if(!['owner','all_members'].includes(input.groupAccess))throw Error('群聊使用权限无效');b.groupAccess=input.groupAccess;}
     if(input.allowedProjects!==undefined){if(!Array.isArray(input.allowedProjects)||input.allowedProjects.some(x=>x!=='*'&&!this.state.projects.some(p=>p.id===x)))throw Error('项目范围无效');b.allowedProjects=[...new Set(input.allowedProjects)];}
     if(input.secret){if(typeof input.secret!=='string'||input.secret.length>4096)throw Error('App Secret 无效');b.secret=await secretTransform(input.secret);}
     if(!old)this.state.bots.push(b);else this.state.bots[this.state.bots.findIndex(x=>x.id===b.id)]=b;this.save();return this.publicBot(b);

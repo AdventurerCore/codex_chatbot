@@ -11,7 +11,7 @@ macOS 可以双击仓库中的 `安装到Codex.command` 安装，`启动机器�
 
 在「项目访问范围」点击「选择项目…」，可读取 Codex 已有的本地项目并选择一个或多个。使用 `feishu_manage` 的 `list_projects` 读取候选列表，`save_project_scope` 用机器人 `id` 和候选条目的 `projectIds` 保存选择；候选 id 与已添加项目的内部 id 不同。读取候选列表不会自动增加访问范围，仅保存用户选择的项目。其他文件夹可在管理界面手动添加。`allowedProjects: ["*"]` 表示所有已添加的项目，不代表整个磁盘或所有候选项目。添加项目时使用用户指定或 Codex 项目列表中的真实绝对路径。
 
-机器人默认只接受已绑定用户的消息；群聊由绑定用户 @机器人 `/enable` 启用。首次选择项目使用 `/workspace`。支持 `/new`、`/task`、`/resume`、`/model`、`/thoughtlevel`、`/stop`、`/status`、`/approve`、`/deny`、`/answer`。命令和文件审批必须由绑定用户作出，不能自动允许。
+机器人默认只接受已绑定用户的消息；群聊由绑定用户 @机器人 `/enable` 启用。`groupAccess: "owner"` 表示仅绑定用户可用，`groupAccess: "all_members"` 表示已启用群聊中的所有成员都可在 @机器人后发送普通需求；可用 `feishu_manage` 的 `save_bot` 修改此设置。私聊始终只接受绑定用户。即使开启群内全员使用，`/enable`、`/disable`、`/workspace`、`/task`、`/resume`、`/approve`、`/deny` 和 `/answer` 仍只允许绑定用户执行，命令和文件审批不能自动允许。普通群成员可使用 `/new`、`/model`、`/thoughtlevel`、`/stop`、`/status` 和直接发送需求。
 
 排查时先调用状态和诊断。不要输出凭据、用户令牌、runtime.json 的认证字段或明文 App Secret。删除、解绑或关闭机器人时只处理用户指定的机器人。不会自动向任意用户发送测试消息；真实飞书收发测试由用户主动给机器人发送一条消息触发。
 
